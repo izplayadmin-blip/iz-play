@@ -1,0 +1,19 @@
+{
+  "defaultDns": "",
+  "dnsServers": [],
+  "proxyUrl": "http://130.250.189.142:8080",
+  "telemetryUrl": "/control/api",
+  "gatewayUrl": "/gateway",
+  "videoGatewayUrl": "/video-gateway",
+  "protectedGatewayUrl": "/protected-gateway",
+  "webPlayerUrl": "https://web.izplay.tv/",
+  "swarmCloudEnabled": false,
+  "swarmCloudUrl": "/player/vendor/swarmcloud-hls.min.js",
+  "swarmCloudKey": "",
+  "swarmCloudAppId": "izplay.tv",
+  "appVersion": "2.1.0",
+  "updateUrl": "",
+  "supportUrl": "",
+  "adminNote": "",
+  "superPeerUrl": "http://209.14.85.55:8080"
+}

@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Super IZ Play — Monitor</title>
+<style>
+  :root{--bg:#0a0a0a;--s1:#111;--s2:#181818;--s3:#222;--red:#cc0000;--red3:#ff3333;--txt:#f0f0f0;--muted:#888;--border:rgba(255,255,255,.08);--ok:#2ecc71;--warn:#f1c40f;--err:#ff4a4a;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+  /* header */
+  .top{display:flex;align-items:center;gap:16px;padding:12px 20px;background:linear-gradient(180deg,#141414,#0e0e0e);border-bottom:1px solid var(--border);flex-shrink:0}
+  .brand{font-size:18px;font-weight:900;letter-spacing:.02em}.brand b{color:var(--red3)}
+  .brand small{display:block;font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.18em}
+  .top-spacer{flex:1}
+  .conn{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+  .dot.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}.dot.err{background:var(--err);box-shadow:0 0 8px var(--err)}
+  .btn{background:var(--s2);border:1px solid var(--border);color:var(--txt);padding:7px 13px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700}
+  .btn:hover{border-color:var(--red)}
+  .btn.primary{background:var(--red);border-color:var(--red);color:#fff}
+  /* body */
+  .wrap{flex:1;overflow-y:auto;padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;align-content:start}
+  .card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:18px;min-height:120px}
+  .card.wide{grid-column:1/-1}
+  .card-hd{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .card-title{font-size:14px;font-weight:800;letter-spacing:.02em;flex:1;text-transform:uppercase}
+  .pill{font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--s3);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .pill.ok{background:rgba(46,204,113,.16);color:var(--ok)}.pill.err{background:rgba(255,74,74,.16);color:var(--err)}.pill.warn{background:rgba(241,196,15,.16);color:var(--warn)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px}
+  .metric{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 10px}
+  .metric .v{font-size:22px;font-weight:900;line-height:1}
+  .metric .l{font-size:11px;color:var(--muted);margin-top:5px;font-weight:600}
+  .metric .v.red{color:var(--red3)}.metric .v.ok{color:var(--ok)}
+  .list{margin-top:12px;max-height:230px;overflow-y:auto}
+  .row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px}
+  .row .n{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .s{font-size:11px;color:var(--muted);font-family:ui-monospace,monospace}
+  .muted{color:var(--muted)}.mono{font-family:ui-monospace,monospace}
+  .err-txt{color:var(--err);font-size:12px}
+  .empty{color:var(--muted);font-size:12px;padding:14px 0;text-align:center}
+  /* overlay config/login */
+  .overlay{position:fixed;inset:0;background:rgba(3,5,9,.86);display:none;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(4px)}
+  .overlay.open{display:flex}
+  .panel{width:min(440px,92vw);background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:26px}
+  .panel h2{font-size:18px;margin-bottom:4px}.panel p{font-size:12px;color:var(--muted);margin-bottom:18px}
+  .field{margin-bottom:13px}.field label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .field input{width:100%;height:44px;background:var(--s2);border:1px solid var(--border);border-radius:9px;color:#fff;padding:0 13px;font-size:14px;outline:none}
+  .field input:focus{border-color:var(--red)}
+  .panel .err-txt{margin:8px 0}
+  .foot{font-size:11px;color:var(--muted);padding:6px 20px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:16px}
+  /* abas + player de teste */
+  .tabs{display:flex;gap:6px}
+  .tab{background:transparent;border:1px solid var(--border);color:var(--muted);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:800}
+  .tab.active{background:var(--s2);color:#fff;border-color:var(--red)}
+  .view{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .view.hidden{display:none}
+  .ptoolbar{display:flex;align-items:center;gap:10px;padding:9px 16px;background:#0e0e0e;border-bottom:1px solid var(--border);flex-shrink:0}
+  .pw{flex:1;border:0;width:100%;background:#000}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand">SUPER <b>IZ</b> PLAY<small>MONITOR ADMIN</small></div>
+    <div class="tabs">
+      <button class="tab active" id="tabMonitor">Monitor</button>
+      <button class="tab" id="tabPlayer">Player de teste</button>
+    </div>
+    <div class="top-spacer"></div>
+    <div class="conn"><span class="dot" id="connDot"></span><span id="connTxt">desconectado</span></div>
+    <span class="muted mono" id="lastUpd">—</span>
+    <button class="btn" id="refreshBtn">Atualizar</button>
+    <button class="btn" id="cfgBtn">⚙ Config</button>
+  </div>
+
+  <div id="viewMonitor" class="view">
+  <div class="wrap" id="dash">
+    <!-- SUPER PEER -->
+    <div class="card">
+      <div class="card-hd"><span class="card-title">Super Peer (P2P)</span><span class="pill" id="spPill">—</span></div>
+      <div class="grid" id="spGrid"></div>
+      <div class="muted mono" id="spMeta" style="margin-top:12px;font-size:11px"></div>
+    </div>
+    <!-- REDE P2P -->
+    <div class="card">
+      <div class="card-hd"><span class="card-title">Rede P2P</span><span class="pill" id="p2pPill">—</span></div>
+      <div class="grid" id="p2pGrid"></div>
+    </div>
+    <!-- SISTEMA (host do painel) -->
+    <div class="card">
+      <div class="card-hd"><span class="card-title">Host do Painel</span><span class="pill" id="sysPill">—</span></div>
+      <div class="grid" id="sysGrid"></div>
+    </div>
+    <!-- CANAIS DISTRIBUÍDOS -->
+    <div class="card">
+      <div class="card-hd"><span class="card-title">Canais distribuídos</span><span class="pill" id="chPill">—</span></div>
+      <div class="list" id="chList"><div class="empty">—</div></div>
+    </div>
+    <!-- CLIENTES -->
+    <div class="card wide">
+      <div class="card-hd"><span class="card-title">Clientes conectados</span><span class="pill" id="cliPill">—</span></div>
+      <div class="list" id="cliList"><div class="empty">—</div></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span id="footPanel">Painel: —</span>
+    <span id="footInt">Atualização: — s</span>
+    <span class="top-spacer" style="flex:1"></span>
+    <span>Só dados reais do Painel Admin · sem simulação</span>
+  </div>
+  </div><!-- /viewMonitor -->
+
+  <div id="viewPlayer" class="view hidden">
+    <div class="ptoolbar">
+      <button class="btn" id="pwHome">Início</button>
+      <button class="btn" id="pwReload">Recarregar</button>
+      <span class="muted mono" id="pwUrl" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <span class="muted" style="font-size:11px">Logue com uma conta e abra canais/filmes/séries para ver se conectam</span>
+    </div>
+    <webview id="pw" class="pw" partition="persist:izplayer" allowpopups src="https://web.izplay.tv/player/"></webview>
+  </div>
+
+  <!-- CONFIG / LOGIN -->
+  <div class="overlay" id="overlay">
+    <div class="panel">
+      <h2>Conectar ao Painel Admin</h2>
+      <p>As credenciais e a URL ficam salvas só nesta máquina.</p>
+      <div class="field"><label>URL do Painel</label><input id="cPanel" placeholder="http://38.46.142.234" /></div>
+      <div class="field"><label>Usuário admin</label><input id="cUser" autocomplete="off" /></div>
+      <div class="field"><label>Senha admin</label><input id="cPass" type="password" autocomplete="off" /></div>
+      <div class="field"><label>Atualizar a cada (segundos)</label><input id="cInt" type="number" min="3" value="8" /></div>
+      <div class="err-txt" id="cErr"></div>
+      <button class="btn primary" id="cConnect" style="width:100%;height:46px;font-size:15px">Conectar</button>
+    </div>
+  </div>
+
+<script>
+const http = require('http'), https = require('https'), { URL } = require('url')
+const $ = id => document.getElementById(id)
+let CFG = load(); let TOKEN = ''; let timer = null
+
+function load(){ try{ return JSON.parse(localStorage.getItem('superiz_cfg')||'{}') }catch(e){ return {} } }
+function save(){ localStorage.setItem('superiz_cfg', JSON.stringify(CFG)) }
+
+// ── HTTP (Node, sem CORS) ──
+function apiCall(pathName, { method='GET', token='', body=null } = {}){
+  return new Promise((resolve,reject)=>{
+    let u; try{ u = new URL(String(CFG.panelUrl||'').replace(/\/+$/,'') + pathName) }catch(e){ return reject(new Error('URL inválida')) }
+    const lib = u.protocol==='https:'?https:http
+    const data = body?JSON.stringify(body):null
+    const headers = { 'Content-Type':'application/json' }
+    if(token) headers['x-session-token'] = token
+    if(data) headers['Content-Length'] = Buffer.byteLength(data)
+    const req = lib.request(u, { method, headers, timeout:9000 }, res=>{
+      let buf=''; res.on('data',d=>buf+=d)
+      res.on('end',()=>{ let j={}; try{ j=JSON.parse(buf||'{}') }catch(e){} resolve({ status:res.statusCode, json:j }) })
+    })
+    req.on('error',reject); req.on('timeout',()=>req.destroy(new Error('timeout')))
+    if(data) req.write(data); req.end()
+  })
+}
+
+// ── formatação ──
+const nf = n => (Number(n)||0).toLocaleString('pt-BR')
+function fmtKB(kb){ kb=Number(kb)||0; if(kb>=1048576) return (kb/1048576).toFixed(1)+' GB'; if(kb>=1024) return (kb/1024).toFixed(1)+' MB'; return Math.round(kb)+' KB' }
+function fmtUptime(sec){ sec=Number(sec)||0; const d=Math.floor(sec/86400), h=Math.floor(sec%86400/3600), m=Math.floor(sec%3600/60); return (d?d+'d ':'')+(h?h+'h ':'')+m+'m' }
+function metric(v, l, cls=''){ return `<div class="metric"><div class="v ${cls}">${v}</div><div class="l">${l}</div></div>` }
+function setConn(ok, txt){ $('connDot').className='dot '+(ok?'ok':'err'); $('connTxt').textContent=txt }
+function pill(el, txt, cls){ const e=$(el); e.textContent=txt; e.className='pill '+(cls||'') }
+
+// ── login ──
+async function connect(){
+  $('cErr').textContent=''
+  try{
+    const r = await apiCall('/api/login', { method:'POST', body:{ user:CFG.user, pass:CFG.pass } })
+    if(r.status===200 && r.json.token){ TOKEN=r.json.token; $('overlay').classList.remove('open'); startLoop(); return true }
+    $('cErr').textContent = r.json.error || ('Falha no login (HTTP '+r.status+')')
+  }catch(e){ $('cErr').textContent = 'Não consegui alcançar o painel: '+e.message }
+  setConn(false,'falha')
+  return false
+}
+
+// ── render ──
+async function refresh(){
+  if(!TOKEN) return
+  let anyOk=false
+  // Super Peer
+  try{
+    const r = await apiCall('/api/p2p/super-peer', { token:TOKEN })
+    if(r.status===401){ TOKEN=''; openCfg('Sessão expirou — reconecte.'); return }
+    const d = r.json||{}; anyOk=true
+    if(d.running){ pill('spPill','ligado','ok') } else { pill('spPill','offline','err') }
+    $('spGrid').innerHTML =
+      metric(nf(d.currentPeers), 'Peers', d.currentPeers?'ok':'') +
+      metric(nf(d.workers), 'Workers') +
+      metric(fmtKB(d.currentUplink), 'Uplink atual') +
+      metric(fmtKB(d.averageUplink), 'Uplink médio') +
+      metric((Number(d.memory)||0)+' MB', 'Memória') +
+      metric(nf(d.restarts), 'Restarts')
+    $('spMeta').textContent = 'v'+(d.version||'?')+' · uptime '+fmtUptime(d.elapsed)+' · '+(d.url||'—')+(d.error?(' · '+d.error):'')
+  }catch(e){ pill('spPill','erro','err'); $('spGrid').innerHTML=`<div class="err-txt">${e.message}</div>`; $('spMeta').textContent='' }
+  // Rede P2P
+  try{
+    const r = await apiCall('/api/telemetry/p2p', { token:TOKEN }); const s=(r.json&&r.json.summary)||{}
+    pill('p2pPill', (s.currentSessions||0)+' sessões', s.currentSessions?'ok':'')
+    $('p2pGrid').innerHTML =
+      metric(nf(s.currentSessions), 'Sessões agora') +
+      metric(nf(s.eventsToday), 'Eventos hoje') +
+      metric(fmtKB(s.p2pDown), 'P2P baixado', 'red') +
+      metric(fmtKB(s.httpDown), 'HTTP baixado') +
+      metric((s.efficiency||0)+'%', 'Economia P2P', 'ok')
+    // canais distribuídos
+    const ch = (r.json&&r.json.topChannels)||[]
+    pill('chPill', ch.length+' canais', ch.length?'ok':'')
+    $('chList').innerHTML = ch.length ? ch.map(c=>`<div class="row"><span class="n">${esc(c.channel||'—')}</span><span class="s">P2P ${fmtKB(c.p2pDown)} · ${nf(c.sessions)} sess.</span></div>`).join('') : '<div class="empty">Sem canais distribuídos agora</div>'
+    anyOk=true
+  }catch(e){ pill('p2pPill','erro','err'); $('p2pGrid').innerHTML=`<div class="err-txt">${e.message}</div>` }
+  // Host
+  try{
+    const r = await apiCall('/api/system', { token:TOKEN }); const d=r.json||{}
+    const ramPct = d.ramTotal ? Math.round(d.ramUsed/d.ramTotal*100) : 0
+    pill('sysPill', d.ramTotal?'online':'—', d.ramTotal?'ok':'')
+    $('sysGrid').innerHTML =
+      metric(ramPct+'%', 'RAM usada', ramPct>85?'red':'') +
+      metric((d.ramUsed||0)+'/'+(d.ramTotal||0)+' MB', 'RAM') +
+      metric((d.diskUsed||'—')+'/'+(d.diskTotal||'—'), 'Disco') +
+      metric('<span style="font-size:12px">'+esc(d.uptime||'—').replace(/.*up /,'up ').slice(0,40)+'</span>', 'Uptime')
+    anyOk=true
+  }catch(e){ pill('sysPill','erro','err'); $('sysGrid').innerHTML=`<div class="err-txt">${e.message}</div>` }
+  // Clientes
+  try{
+    const r = await apiCall('/api/devices', { token:TOKEN })
+    let list = Array.isArray(r.json) ? r.json : (r.json.devices || r.json.online || [])
+    const now = Date.now()
+    list = list.slice().sort((a,b)=>(b.lastSeen||0)-(a.lastSeen||0))
+    const onl = list.filter(d=> now-(d.lastSeen||0) < 5*60*1000).length
+    pill('cliPill', onl+' online / '+list.length, onl?'ok':'')
+    $('cliList').innerHTML = list.length ? list.slice(0,60).map(d=>{
+      const on = now-(d.lastSeen||0) < 5*60*1000
+      return `<div class="row"><span class="dot ${on?'ok':''}"></span><span class="n"><b>${esc(d.user||'—')}</b> ${d.watching?('· '+esc(d.watching)):''}</span><span class="s">${esc(d.version||'')} · ${esc(String(d.ip||''))}</span></div>`
+    }).join('') : '<div class="empty">Nenhum cliente</div>'
+    anyOk=true
+  }catch(e){ pill('cliPill','erro','err'); $('cliList').innerHTML=`<div class="err-txt">${e.message}</div>` }
+
+  setConn(anyOk, anyOk?'conectado':'sem resposta')
+  $('lastUpd').textContent = new Date().toLocaleTimeString('pt-BR')
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])) }
+
+function startLoop(){
+  $('footPanel').textContent = 'Painel: '+CFG.panelUrl
+  $('footInt').textContent = 'Atualização: '+(CFG.interval||8)+' s'
+  refresh()
+  if(timer) clearInterval(timer)
+  timer = setInterval(refresh, Math.max(3,Number(CFG.interval)||8)*1000)
+}
+function openCfg(msg){
+  $('cPanel').value=CFG.panelUrl||'http://38.46.142.234'; $('cUser').value=CFG.user||''; $('cPass').value=CFG.pass||''; $('cInt').value=CFG.interval||8
+  $('cErr').textContent = msg||''
+  $('overlay').classList.add('open')
+}
+
+// ── eventos ──
+$('cfgBtn').onclick = ()=>openCfg()
+$('refreshBtn').onclick = refresh
+$('cConnect').onclick = ()=>{
+  CFG.panelUrl=$('cPanel').value.trim(); CFG.user=$('cUser').value.trim(); CFG.pass=$('cPass').value; CFG.interval=Number($('cInt').value)||8
+  if(!CFG.panelUrl||!CFG.user||!CFG.pass){ $('cErr').textContent='Preencha URL, usuário e senha.'; return }
+  save(); connect()
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Enter' && $('overlay').classList.contains('open')) $('cConnect').click() })
+
+// ── abas (Monitor / Player de teste) ──
+function showTab(t){
+  $('viewMonitor').classList.toggle('hidden', t!=='monitor')
+  $('viewPlayer').classList.toggle('hidden', t!=='player')
+  $('tabMonitor').classList.toggle('active', t==='monitor')
+  $('tabPlayer').classList.toggle('active', t==='player')
+}
+$('tabMonitor').onclick = ()=>showTab('monitor')
+$('tabPlayer').onclick  = ()=>showTab('player')
+const pw = $('pw')
+if(pw){
+  pw.addEventListener('dom-ready', ()=>{ try{ $('pwUrl').textContent = pw.getURL() }catch(e){} })
+  pw.addEventListener('did-navigate', e=>{ $('pwUrl').textContent = e.url })
+  pw.addEventListener('did-navigate-in-page', e=>{ $('pwUrl').textContent = e.url })
+  $('pwReload').onclick = ()=>{ try{ pw.reload() }catch(e){} }
+  $('pwHome').onclick   = ()=>{ try{ pw.loadURL('https://web.izplay.tv/player/') }catch(e){} }
+}
+
+// ── boot ──
+if(CFG.panelUrl && CFG.user && CFG.pass){ $('footPanel').textContent='Painel: '+CFG.panelUrl; connect() }
+else openCfg()
+</script>
+</body>
+</html>

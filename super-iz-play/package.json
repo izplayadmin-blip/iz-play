@@ -1,0 +1,12 @@
+{
+  "name": "super-iz-play",
+  "version": "0.1.0",
+  "description": "Super IZ Play — app desktop de administração/monitoramento (P2P, Super Peer, infra). Só dados reais do Painel.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^40.10.2"
+  }
+}

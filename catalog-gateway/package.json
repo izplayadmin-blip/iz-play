@@ -1,0 +1,9 @@
+{
+  "name": "iz-play-catalog-gateway",
+  "version": "2.1.0",
+  "private": true,
+  "description": "IZ Play v2.1 - gateway de catálogo Xtream para Web Player",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

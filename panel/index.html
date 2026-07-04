@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>IZ Play — Painel</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080b0e;--s1:#101418;--s2:#151a20;--s3:#1b222a;--red:#e50914;--red2:#ff1a24;--txt:#f5f7fb;--muted:#9aa4b2;--border:rgba(255,255,255,.09);--green:#22c55e;--yellow:#facc15;--blue:#38bdf8;--purple:#a855f7;--orange:#f97316;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--font);overflow:hidden;}
+/* LOGIN */
+#screenLogin{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;background-image:radial-gradient(ellipse at 50% 30%,rgba(204,0,0,.1) 0%,transparent 65%);}
+.login-box{width:340px;max-width:95vw;}
+.login-logo{font-size:28px;font-weight:900;color:#fff;text-align:center;margin-bottom:28px;letter-spacing:0;}
+.login-input{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:var(--txt);font-size:14px;padding:13px 16px;border-radius:8px;outline:none;margin-bottom:12px;transition:border-color .2s;}
+.login-input:focus{border-color:var(--red);}
+.login-input::placeholder{color:var(--muted);}
+.login-btn{width:100%;background:var(--red);color:#fff;border:none;padding:14px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s;}
+.login-btn:hover{background:var(--red2);}
+.login-err{font-size:12px;color:#ff6b6b;text-align:center;margin-top:10px;min-height:16px;}
+/* APP */
+#app{display:none;height:100vh;flex-direction:row;}
+.sb{width:230px;background:linear-gradient(180deg,#101419,#0b0f13);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;box-shadow:12px 0 32px rgba(0,0,0,.22);}
+.sb-logo{padding:18px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+.sb-mark{width:42px;height:42px;background:var(--red);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;color:#fff;box-shadow:0 10px 24px rgba(229,9,20,.25);}
+.sb-name{font-size:18px;font-weight:800;}
+.sb-nav{padding:14px 12px;flex:1;overflow-y:auto;}
+.sb-sec{font-size:10px;color:rgba(255,255,255,.25);letter-spacing:1.5px;text-transform:uppercase;padding:10px 8px 5px;}
+.sbi{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:8px;cursor:pointer;color:#c3cad5;transition:all .12s;margin-bottom:5px;}
+.sbi:hover{background:rgba(255,255,255,.04);color:var(--txt);}
+.sbi.on{background:linear-gradient(90deg,rgba(229,9,20,.28),rgba(229,9,20,.08));color:#fff;}
+.sbi-ico{width:20px;text-align:center;color:inherit;opacity:.9;font-size:15px;}
+.sbi-lbl{font-size:14px;}
+.sbi-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;}
+.sb-bot{padding:16px 18px;border-top:1px solid var(--border);}
+.sb-usr{display:flex;align-items:center;gap:10px;padding:12px;background:rgba(255,255,255,.04);border-radius:10px;cursor:pointer;}
+.sb-av{width:40px;height:40px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0;}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{height:62px;background:rgba(16,20,24,.88);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:12px;flex-shrink:0;backdrop-filter:blur(16px);}
+.tb-title{font-size:20px;font-weight:800;flex:1;}
+.tbtn{background:var(--s2);border:1px solid var(--border);color:#dce3ee;padding:9px 15px;border-radius:8px;cursor:pointer;font-size:13px;transition:all .12s;}
+.tbtn:hover{border-color:var(--red);color:var(--red);}
+.tbtn.red{background:var(--red);border-color:var(--red);color:#fff;}
+.tbtn.red:hover{background:var(--red2);}
+.sdot{width:6px;height:6px;border-radius:50%;animation:pulse 2s infinite;}
+.sdot.ok{background:var(--green);}
+.sdot.err{background:#e74c3c;animation:none;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.main{flex:1;overflow-y:auto;padding:16px 18px 22px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;background:radial-gradient(circle at top right,rgba(56,189,248,.06),transparent 32%),radial-gradient(circle at left 45%,rgba(229,9,20,.04),transparent 38%);}
+.view{display:none;}
+.view.on{display:block;animation:fin .18s ease;}
+@keyframes fin{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
+.sc{background:linear-gradient(145deg,rgba(21,26,32,.98),rgba(12,16,20,.98));border:1px solid var(--border);border-radius:8px;padding:16px;position:relative;overflow:hidden;box-shadow:0 18px 40px rgba(0,0,0,.18);}
+.sc:before{content:"";position:absolute;left:0;top:0;width:62px;height:2px;background:var(--accent,var(--red));box-shadow:0 0 24px var(--accent,var(--red));}
+.sl{font-size:12px;color:#c2cad5;text-transform:uppercase;letter-spacing:.45px;margin-bottom:10px;}
+.sv{font-size:32px;font-weight:850;letter-spacing:0;}
+.ss{font-size:13px;color:var(--muted);margin-top:5px;}
+.kpi-icon{position:absolute;right:16px;top:50%;transform:translateY(-50%);width:66px;height:66px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(34,197,94,.12);color:var(--accent,var(--green));font-size:30px;}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(34,197,94,.13);color:var(--green);vertical-align:middle;}
+.card{background:linear-gradient(145deg,rgba(18,23,28,.96),rgba(11,15,19,.96));border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px;box-shadow:0 18px 40px rgba(0,0,0,.16);}
+.wide-table-wrap{overflow-x:auto;}
+.wide-table{min-width:1480px;}
+.wide-table th,.wide-table td{white-space:nowrap;}
+.device-sub{font-size:10px;color:var(--muted);margin-top:3px;font-family:var(--mono);}
+.metric-mini{display:block;font-size:10px;color:var(--muted);margin-top:3px;}
+.ch{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.ct{font-size:15px;font-weight:750;}
+.cb{background:var(--s2);border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:5px;cursor:pointer;font-size:11px;transition:all .12s;}
+.cb:hover{border-color:var(--red);color:var(--red);}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:4px 9px;border-radius:6px;font-size:11px;font-weight:700;}
+.bok{background:rgba(46,204,113,.12);color:#2ecc71;}
+.bwarn{background:rgba(241,196,15,.12);color:#f1c40f;}
+.berr{background:rgba(231,76,60,.12);color:#e74c3c;}
+.boff{background:rgba(255,255,255,.06);color:var(--muted);}
+.log-box{font-family:monospace;font-size:11px;padding:12px;background:#0a0a0a;max-height:300px;overflow-y:auto;line-height:1.7;}
+.log-ok{color:#2ecc71}
+.log-err{color:#e74c3c}
+.log-warn{color:#f1c40f}
+.log-info{color:var(--muted)}
+.sg2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.cfc{background:var(--s1);border:1px solid var(--border);border-radius:9px;padding:15px;margin-bottom:14px;}
+.cfct{font-size:12px;font-weight:600;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.cfr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.cfr:last-child{margin-bottom:0;}
+.cfl{font-size:12px;}
+.cfs{font-size:10px;color:var(--muted);margin-top:1px;}
+input,select,textarea{background:var(--s3);border:1px solid var(--border);color:var(--txt);font-size:11px;padding:6px 9px;border-radius:6px;outline:none;}
+input:focus,select:focus,textarea:focus{border-color:var(--red);}
+.sav{background:var(--red);color:#fff;border:none;padding:8px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;width:100%;margin-top:10px;transition:background .15s;}
+.sav:hover{background:var(--red2);}
+.sav.out{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.sav.out:hover{border-color:var(--red);color:var(--red);}
+table{width:100%;border-collapse:collapse;}
+th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);font-weight:500;}
+td{font-size:11px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.03);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.015);}
+#toast{position:fixed;bottom:16px;right:16px;background:var(--s1);border:1px solid #2ecc71;color:#2ecc71;padding:9px 14px;border-radius:7px;font-size:12px;z-index:999;display:none;}
+.dash-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(360px,.9fr);gap:14px;margin-bottom:14px;}
+.dash-bottom{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:14px;margin-bottom:14px;}
+.dash-footer{display:grid;grid-template-columns:1fr 1.1fr 1.1fr;gap:18px;padding:16px 20px;}
+.alert-row{display:grid;grid-template-columns:44px 1fr auto 16px;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--border);}
+.alert-row:last-child{border-bottom:none;}
+.alert-ico{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);font-weight:900;}
+.alert-title{font-size:14px;font-weight:650;}
+.alert-count{font-size:13px;font-weight:800;}
+.donut-wrap{display:grid;grid-template-columns:138px 1fr;gap:18px;align-items:center;padding:16px;}
+.donut{width:112px;height:112px;border-radius:50%;background:conic-gradient(var(--green) 0 55%,#ef4444 55% 80%,#38bdf8 80% 100%);display:flex;align-items:center;justify-content:center;position:relative;margin:auto;}
+.donut:after{content:"";position:absolute;width:66px;height:66px;background:#11161b;border-radius:50%;}
+.donut-center{position:relative;z-index:1;text-align:center;}
+.donut-main{font-size:23px;font-weight:850;}
+.donut-sub{font-size:10px;color:var(--muted);}
+.legend-row{display:grid;grid-template-columns:12px 1fr auto auto;gap:9px;align-items:center;font-size:12px;margin-bottom:10px;}
+.legend-dot{width:10px;height:10px;border-radius:50%;}
+.line-card{padding:16px;}
+.line-chart{width:100%;height:132px;display:block;}
+.mini-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px;text-align:center;}
+.mini-metric{border-left:1px solid var(--border);}
+.mini-metric:first-child{border-left:none;}
+.mini-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.mini-value{font-size:20px;font-weight:850;margin-top:3px;}
+.resource-bar{height:7px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;margin-top:8px;}
+.resource-fill{height:100%;background:var(--accent,var(--green));border-radius:999px;width:0%;}
+.version-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.version-name{font-size:12px;color:var(--muted);}
+.version-number{font-size:22px;font-weight:850;margin:5px 0;}
+#v-dash > .sg:not(.modern-kpis),#v-dash > .card:not(.modern-card){display:none;}
+@media (max-width:1100px){.sg,.dash-bottom{grid-template-columns:repeat(2,1fr)}.dash-grid{grid-template-columns:1fr}.dash-footer{grid-template-columns:1fr}.sb{width:210px}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="screenLogin">
+  <div class="login-box">
+    <div class="login-logo">IZ Play</div>
+    <input class="login-input" id="loginUser" placeholder="Usuário" type="text" autocomplete="off"/>
+    <input class="login-input" id="loginPass" placeholder="Senha" type="password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button class="login-btn" onclick="doLogin()">ENTRAR</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="sb">
+    <div class="sb-logo">
+      <div class="sb-mark">IZ</div>
+      <div><div class="sb-name">IZ Play</div><div style="font-size:10px;color:var(--muted);">Admin</div></div>
+    </div>
+    <div class="sb-nav">
+      <div class="sb-sec">Principal</div>
+      <div class="sbi on" onclick="sv('dash')"><span class="sbi-ico">⌂</span><span class="sbi-lbl">Dashboard</span></div>
+      <div class="sbi" onclick="sv('users')"><span class="sbi-ico">☷</span><span class="sbi-lbl">Clientes</span><span class="sbi-badge" id="userBadge">0</span></div>
+      <div class="sb-sec">Sistema</div>
+      <div class="sbi" onclick="sv('proxy')"><span class="sbi-ico">◎</span><span class="sbi-lbl">Proxy</span></div>
+      <div class="sbi" onclick="sv('p2p')"><span class="sbi-ico">◌</span><span class="sbi-lbl">P2P</span></div>
+      <div class="sbi" onclick="sv('reports')"><span class="sbi-ico">▤</span><span class="sbi-lbl">Reports</span><span class="sbi-badge" id="repBadge">0</span></div>
+      <div class="sbi" onclick="sv('logs')"><span class="sbi-ico">≡</span><span class="sbi-lbl">Logs</span></div>
+      <div class="sbi" onclick="sv('settings')"><span class="sbi-lbl">Configurações</span></div>
+    </div>
+    <div class="sb-bot">
+      <div class="sb-usr" onclick="doLogout()">
+        <div class="sb-av">AD</div>
+        <div style="flex:1;"><div style="font-size:14px;font-weight:700;" id="sbUser">Admin</div><div style="font-size:11px;color:var(--muted);">Administrador</div><div style="font-size:11px;color:var(--green);margin-top:4px;">● Online</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="topbar">
+      <span class="tb-title" id="tbt">Dashboard</span>
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;" id="proxyStatusBar">
+        <div class="sdot ok" id="proxyDot"></div>
+        <span id="proxyStatusTxt" style="color:#2ecc71;">Proxy online</span>
+      </div>
+      <button class="tbtn" onclick="loadAll()">Atualizar</button>
+    </div>
+    <div class="main">
+
+      <!-- DASHBOARD -->
+      <div class="view on" id="v-dash">
+        <div class="sg modern-kpis">
+          <div class="sc" style="--accent:var(--green)"><div class="sl">Clientes ativos</div><div class="sv" id="dActiveUsers">0 <span class="chip" id="dActiveDelta">agora</span></div><div class="ss">Online agora</div><div class="kpi-icon">☷</div></div>
+          <div class="sc" style="--accent:var(--blue)"><div class="sl">Dispositivos online</div><div class="sv" id="dDevicesModern">0</div><div class="ss">Conectados agora</div><div class="kpi-icon" style="background:rgba(56,189,248,.12)">▣</div></div>
+          <div class="sc" style="--accent:var(--green)"><div class="sl">Health score</div><div class="sv" id="dHealthScore">--</div><div class="ss" id="dHealthLabel">Qualidade geral</div><div class="kpi-icon">♡</div></div>
+          <div class="sc" style="--accent:var(--purple)"><div class="sl">Status proxy</div><div class="sv" id="dProxyStatusModern">--</div><div class="ss" id="dProxyUptimeModern">--</div><div class="kpi-icon" style="background:rgba(168,85,247,.12)">◎</div></div>
+        </div>
+        <div class="dash-grid">
+          <div class="card modern-card">
+            <div class="ch"><span class="ct">Usuarios online agora</span><button class="cb" onclick="sv('users')">Ver todos</button></div>
+            <div id="dashUsersModern"></div>
+          </div>
+          <div class="card modern-card">
+            <div class="ch"><span class="ct">Alertas e Diagnosticos</span><button class="cb" onclick="sv('users')">Ver clientes</button></div>
+            <div id="dashAlerts"></div>
+          </div>
+        </div>
+        <div class="card modern-card">
+          <div class="dash-footer">
+            <div><div class="sl">Versoes</div><div class="version-grid"><div><div class="version-name">Proxy</div><div class="version-number">1.0</div><span class="badge bok">Online</span></div><div><div class="version-name">Player</div><div class="version-number">1.1</div><span class="badge bok">Atualizada</span></div><div><div class="version-name">Web Player</div><div class="version-number">0.1</div><span class="badge bwarn">Pendente</span></div></div></div>
+            <div><div class="sl">Recursos do servidor</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;"><div>CPU<div class="resource-bar"><div class="resource-fill" id="cpuFill" style="--accent:var(--green);width:18%"></div></div></div><div>RAM<div class="resource-bar"><div class="resource-fill" id="ramFill" style="--accent:var(--blue);width:0%"></div></div></div><div>Disco<div class="resource-bar"><div class="resource-fill" id="diskFill" style="--accent:var(--purple);width:0%"></div></div></div></div></div>
+            <div><div class="sl">Uptime do proxy</div><div style="display:flex;align-items:center;gap:14px;"><div class="kpi-icon" style="position:static;transform:none;width:40px;height:40px;font-size:20px;background:rgba(255,255,255,.07);color:#dce3ee;">◷</div><div><div class="version-number" id="proxyUptimeBig">--</div><div class="ss" id="proxySince">Aguardando status</div></div></div></div>
+          </div>
+        </div>
+        <div class="sg">
+          <div class="sc" style="--accent:#2ecc71"><div class="sl">Status proxy</div><div class="sv" id="dProxyStatus" style="color:#2ecc71;">—</div><div class="ss" id="dProxyUptime">—</div></div>
+          <div class="sc"><div class="sl">Dispositivos online</div><div class="sv" id="dDevices">0</div><div class="ss">Últimos 5 min</div></div>
+          <div class="sc" style="--accent:#f1c40f"><div class="sl">Reports hoje</div><div class="sv" id="dReports" style="color:#f1c40f;">0</div><div class="ss">Falhas reportadas</div></div>
+          <div class="sc" style="--accent:#3498db"><div class="sl">RAM usada</div><div class="sv" id="dRam" style="color:#3498db;">—</div><div class="ss" id="dDisk">—</div></div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="ct">Dispositivos online agora</span></div>
+          <div id="dashDevices" style="padding:8px 0;"></div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="ct">Últimos reports</span><button class="cb" onclick="sv('reports')">Ver todos</button></div>
+          <div id="dashReports" style="padding:8px 0;"></div>
+        </div>
+      </div>
+
+      <div class="view" id="v-diagnostics">
+        <div class="card">
+          <div class="ch"><span class="ct">Alertas e diagnosticos</span><button class="cb" onclick="loadAll()">Atualizar</button></div>
+          <div id="diagList"></div>
+        </div>
+      </div>
+
+      <!-- P2P / SWARMCLOUD -->
+      <div class="view" id="v-p2p">
+        <div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));">
+          <div class="sc" style="--accent:var(--blue)"><div class="sl">Sessões P2P</div><div class="sv" id="p2pSessions">0</div><div class="ss">Últimos 5 min</div></div>
+          <div class="sc" style="--accent:var(--green)"><div class="sl">P2P hoje</div><div class="sv" id="p2pDown">0 KB</div><div class="ss">Baixado por peers</div></div>
+          <div class="sc" style="--accent:#f97316"><div class="sl">Origem hoje</div><div class="sv" id="p2pHttp">0 KB</div><div class="ss">Back-to-origin</div></div>
+          <div class="sc" style="--accent:var(--purple)"><div class="sl">Eficiência</div><div class="sv" id="p2pEfficiency">0%</div><div class="ss">Economia estimada</div></div>
+          <div class="sc" style="--accent:var(--green)"><div class="sl">Super Peer BR</div><div class="sv" id="p2pSuperStatus">--</div><div class="ss" id="p2pSuperMeta">Aguardando status</div></div>
+        </div>
+        <div class="dash-grid">
+          <div class="card modern-card">
+            <div class="ch"><span class="ct">Conexões P2P recentes</span><button class="cb" onclick="loadP2P()">Atualizar</button></div>
+            <div id="p2pRecent"></div>
+          </div>
+          <div class="card modern-card">
+            <div class="ch"><span class="ct">Top canais por tráfego</span></div>
+            <div id="p2pTopChannels"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROXY -->
+      <div class="view" id="v-proxy">
+        <div class="sg" style="grid-template-columns:repeat(3,1fr);">
+          <div class="sc" style="--accent:#2ecc71"><div class="sl">Status</div><div class="sv" id="pStatus">—</div><div class="ss" id="pUptime">—</div></div>
+          <div class="sc"><div class="sl">Memória</div><div class="sv" id="pMem">—</div><div class="ss">MB</div></div>
+          <div class="sc"><div class="sl">Reinicializações</div><div class="sv" id="pRestarts">—</div><div class="ss">Total</div></div>
+        </div>
+        <div class="cfc">
+          <div class="cfct">Controle</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--s2);border-radius:7px;margin-bottom:12px;">
+            <div class="sdot ok" id="pDot"></div>
+            <span style="font-size:12px;font-weight:600;" id="pProcStatus">iptv-proxy</span>
+            <span class="badge bok" id="pBadge" style="margin-left:auto;">Online</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            <button class="sav out" onclick="proxyAction('restart')">Reiniciar</button>
+            <button class="sav out" style="border-color:#e74c3c;color:#e74c3c;" onclick="proxyAction('stop')">Parar</button>
+            <button class="sav" onclick="proxyAction('start')">Iniciar</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="ct">Logs recentes</span><button class="cb" onclick="loadLogs()">Atualizar</button></div>
+          <div class="log-box" id="proxyLogs">Carregando...</div>
+        </div>
+      </div>
+
+      <!-- DISPOSITIVOS -->
+      <div class="view" id="v-users">
+        <div class="card">
+          <div class="ch">
+            <span class="ct">Clientes</span>
+            <input id="userSearch" oninput="renderUsers()" placeholder="Buscar login, IP, operadora..." style="width:240px;"/>
+          </div>
+          <table>
+            <thead><tr><th>Login</th><th>MAC</th><th>Status</th><th>Dispositivos</th><th>IP pÃºblico</th><th>IP local</th><th>Ping</th><th>Operadora / ASN</th></tr></thead>
+            <tbody id="userTable"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">Nenhum cliente encontrado</td></tr></tbody>
+          </table>
+        </div>
+        <div class="card" id="userDetailCard" style="display:none;">
+          <div class="ch"><span class="ct" id="userDetailTitle">Detalhes do cliente</span><button class="cb" onclick="document.getElementById('userDetailCard').style.display='none'">Fechar</button></div>
+          <div id="userDetailBody" style="padding:12px;"></div>
+        </div>
+      </div>
+
+      <div class="view" id="v-devices">
+        <div class="card">
+          <div class="ch">
+            <span class="ct">Dispositivos</span>
+            <input id="devSearch" oninput="renderDevices()" placeholder="Buscar usuario, IP, MAC..." style="width:220px;"/>
+          </div>
+          <table>
+            <thead><tr><th>Usuário</th><th>MAC</th><th>IP público</th><th>IP local</th><th>Proxy</th><th>DNS</th><th>Status</th></tr></thead>
+            <tbody id="devTable"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">Nenhum dispositivo ainda</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TESTE DE VELOCIDADE -->
+      <div class="view" id="v-speedtests">
+        <div class="card">
+          <div class="ch">
+            <span class="ct">Testes de velocidade dos clientes</span>
+            <div style="display:flex;gap:8px;">
+              <input id="speedClientLogin" placeholder="Login do cliente" style="width:150px;"/>
+              <button class="cb" onclick="requestClientSpeedTest()">Solicitar teste</button>
+              <input id="speedSearch" oninput="renderSpeedTests()" placeholder="Buscar cliente, IP, operadora..." style="width:220px;"/>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>HorÃ¡rio</th><th>UsuÃ¡rio</th><th>DiagnÃ³stico</th><th>Download</th><th>Upload</th><th>Ping/Jitter</th><th>Perda</th><th>Operadora / ASN</th></tr></thead>
+            <tbody id="speedTable"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">Nenhum teste ainda</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- REPORTS -->
+      <div class="view" id="v-reports">
+        <div class="card">
+          <div class="ch">
+            <span class="ct">Reports de falha</span>
+            <div style="display:flex;gap:8px;">
+              <input id="repSearch" oninput="renderReports()" placeholder="Buscar usuario, conteudo..." style="width:220px;"/>
+              <select id="repType" onchange="renderReports()">
+                <option value="">Todos</option>
+                <option value="canal">Canal</option>
+                <option value="filme">Filme</option>
+                <option value="serie">Serie</option>
+                <option value="speedtest">Teste de velocidade</option>
+              </select>
+            </div>
+          </div>
+          <div id="reportsInsights" style="padding:12px 16px;border-top:1px solid var(--border);"></div>
+          <table>
+            <thead><tr><th>Horário</th><th>Usuário</th><th>Tipo</th><th>Conteúdo</th><th>Problemas</th><th>IP</th></tr></thead>
+            <tbody id="repTable"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Nenhum report ainda</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- LOGS -->
+      <div class="view" id="v-logs">
+        <div class="card">
+          <div class="ch">
+            <span class="ct">Logs do proxy</span>
+            <div style="display:flex;gap:8px;">
+              <select id="logLines" onchange="loadLogs()" style="font-size:11px;padding:4px 8px;">
+                <option value="50">50 linhas</option>
+                <option value="100">100 linhas</option>
+                <option value="200">200 linhas</option>
+              </select>
+              <button class="cb" onclick="loadLogs()">Atualizar</button>
+            </div>
+          </div>
+          <div class="log-box" id="fullLogs">Carregando...</div>
+        </div>
+      </div>
+
+      <!-- CONFIGURACOES -->
+      <div class="view" id="v-settings">
+        <div class="sg2">
+          <div class="cfc">
+            <div class="cfct">Aplicativo</div>
+            <div class="cfr">
+              <div><div class="cfl">DNS padrão do app</div><div class="cfs">Servidor sugerido na tela de login</div></div>
+              <input id="cfgDefaultDns" placeholder="https://servidor-iptv.exemplo"/>
+            </div>
+            <div class="cfr" style="align-items:flex-start;">
+              <div><div class="cfl">DNS alternativas</div><div class="cfs">Uma por linha, de 3 a 10 opções para o app testar automaticamente</div></div>
+              <textarea id="cfgDnsServers" rows="6" placeholder="Um servidor por linha"></textarea>
+            </div>
+            <div class="cfr">
+              <div><div class="cfl">Versão atual</div><div class="cfs">Usada pelo app para checar update</div></div>
+              <input id="cfgAppVersion" placeholder="1.3.0"/>
+            </div>
+            <div class="cfr">
+              <div><div class="cfl">Link de download/update</div><div class="cfs">URL pública do instalador ou pacote</div></div>
+              <input id="cfgUpdateUrl" placeholder="https://..."/>
+            </div>
+            <div class="cfr">
+              <div><div class="cfl">Suporte</div><div class="cfs">WhatsApp, site ou canal de atendimento</div></div>
+              <input id="cfgSupportUrl" placeholder="https://..."/>
+            </div>
+          </div>
+          <div class="cfc">
+            <div class="cfct">Serviços</div>
+            <div class="cfr">
+              <div><div class="cfl">URL do proxy</div><div class="cfs">Endereco usado pelos players</div></div>
+              <input id="cfgProxyUrl" placeholder="http://IP:8080"/>
+            </div>
+            <div class="cfr">
+              <div><div class="cfl">URL de telemetria</div><div class="cfs">Endpoint base do painel</div></div>
+              <input id="cfgTelemetryUrl" placeholder="http://IP/api"/>
+            </div>
+            <div class="cfr">
+              <div><div class="cfl">URL do IZ Play Gateway</div><div class="cfs">Proxima camada entre app, proxy e IPTV</div></div>
+              <input id="cfgGatewayUrl" placeholder="/gateway"/>
+            </div>
+            <div class="cfr">
+              <div><div class="cfl">URL do Web Player</div><div class="cfs">Endereco publico da versao navegador</div></div>
+              <input id="cfgWebPlayerUrl" placeholder="http://200.218.236.9"/>
+            </div>
+            <div class="cfr">
+              <div><div class="cfl">SwarmCloud P2P</div><div class="cfs">Ative somente após liberar o domínio no provedor</div></div>
+              <select id="cfgSwarmEnabled"><option value="false">Desativado</option><option value="true">Ativado</option></select>
+            </div>
+            <div class="cfr">
+              <div><div class="cfl">Endpoint SwarmCloud</div><div class="cfs">SDK/API/CDN informado pelo provedor</div></div>
+              <input id="cfgSwarmUrl" placeholder="https://..."/>
+            </div>
+            <div class="cfr">
+              <div><div class="cfl">Token SwarmCloud</div><div class="cfs">Enviado ao SDK do player; não use como segredo administrativo</div></div>
+              <input id="cfgSwarmKey" type="password" placeholder="Opcional"/>
+            </div>
+            <div class="cfr">
+              <div><div class="cfl">Super Peer Brasil</div><div class="cfs">Servidor auxiliar do P2P para monitoramento no painel</div></div>
+              <input id="cfgSuperPeerUrl" placeholder="http://209.14.85.55:8080"/>
+            </div>
+            <div class="cfr" style="align-items:flex-start;">
+              <div><div class="cfl">Nota interna</div><div class="cfs">Observação visível só no painel</div></div>
+              <textarea id="cfgAdminNote" rows="4" placeholder="Ex.: trocar porta 8080 apos HTTPS"></textarea>
+            </div>
+            <button class="sav" onclick="saveConfig()">Salvar configurações</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="ct">Configuração pública do app</span><button class="cb" onclick="loadConfig()">Atualizar</button></div>
+          <div class="log-box" id="clientConfigBox">Carregando...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let token = sessionStorage.getItem('izpanel_token') || ''
+let deviceCache = []
+let reportCache = []
+let p2pCache = {summary:{},recent:[],topChannels:[]}
+let superPeerCache = {running:false}
+const titles = {dash:'Dashboard',proxy:'Proxy',p2p:'P2P / SwarmCloud',users:'Clientes',reports:'Reports',logs:'Logs',settings:'Configuracoes'}
+
+
+function esc(v){
+  return String(v ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
+  }[ch]))
+}
+
+// ── AUTH ──
+async function doLogin(){
+  const user = document.getElementById('loginUser').value.trim()
+  const pass = document.getElementById('loginPass').value.trim()
+  const err = document.getElementById('loginErr')
+  if(!user||!pass){err.textContent='Preencha os campos.';return}
+  err.textContent='Entrando...'
+  try{
+    const r = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user,pass})})
+    const d = await r.json()
+    if(!r.ok){err.textContent=d.error||'Erro';return}
+    token = d.token
+    sessionStorage.setItem('izpanel_token',token)
+    document.getElementById('sbUser').textContent = d.user
+    document.getElementById('screenLogin').style.display='none'
+    document.getElementById('app').style.display='flex'
+    loadAll()
+    setInterval(loadAll, 30000) // atualiza a cada 30s
+  }catch(e){err.textContent='Erro de conexão'}
+}
+
+async function doLogout(){
+  await api('POST','/api/logout')
+  token=''
+  sessionStorage.removeItem('izpanel_token')
+  document.getElementById('app').style.display='none'
+  document.getElementById('screenLogin').style.display='flex'
+}
+
+// ── API ──
+async function api(method, url, body){
+  const opts = {method, headers:{'x-session-token':token}}
+  if(body){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body)}
+  const r = await fetch(url, opts)
+  return r.json()
+}
+
+// ── VIEWS ──
+function sv(v){
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'))
+  document.querySelectorAll('.sbi').forEach(x=>x.classList.remove('on'))
+  document.getElementById('v-'+v).classList.add('on')
+  document.getElementById('tbt').textContent=titles[v]||v
+  document.querySelector(`.sbi[onclick="sv('${v}')"]`)?.classList.add('on')
+  if(v==='proxy')loadProxy()
+  if(v==='p2p')loadP2P()
+  if(v==='users')loadUsers()
+  if(v==='diagnostics')renderDiagnostics()
+  if(v==='reports')loadReports()
+  if(v==='logs')loadLogs()
+  if(v==='settings')loadConfig()
+}
+
+// ── LOAD ALL ──
+async function loadAll(){
+  loadProxyStatus()
+  loadSystem()
+  loadDevices()
+  loadReports()
+  loadP2P()
+  renderUsers()
+  renderSpeedTests()
+  setTimeout(updateDashboardModern, 250)
+}
+
+async function loadProxyStatus(){
+  try{
+    const d = await api('GET','/api/proxy/status')
+    const running = d.running
+    const dot = document.getElementById('proxyDot')
+    const txt = document.getElementById('proxyStatusTxt')
+    dot.className = 'sdot '+(running?'ok':'err')
+    txt.textContent = running?'Proxy online':'Proxy offline'
+    txt.style.color = running?'#2ecc71':'#e74c3c'
+    document.getElementById('dProxyStatus').textContent = running?'Online':'Offline'
+    document.getElementById('dProxyStatus').style.color = running?'#2ecc71':'#e74c3c'
+    document.getElementById('dProxyStatusModern').textContent = running?'Online':'Offline'
+    document.getElementById('dProxyStatusModern').style.color = running?'#fff':'#e74c3c'
+    if(d.uptime){
+      const mins = Math.floor((Date.now()-d.uptime)/60000)
+      const h = Math.floor(mins/60), m = mins%60
+      document.getElementById('dProxyUptime').textContent = `há ${h}h ${m}min`
+    }
+    // Proxy view
+    document.getElementById('pStatus').textContent = running?'Online':'Offline'
+    document.getElementById('pStatus').style.color = running?'#2ecc71':'#e74c3c'
+    document.getElementById('pMem').textContent = d.memory?Math.round(d.memory/1024/1024):'—'
+    document.getElementById('pRestarts').textContent = d.restarts||0
+    document.getElementById('pDot').className = 'sdot '+(running?'ok':'err')
+    document.getElementById('pBadge').textContent = running?'Online':'Offline'
+    document.getElementById('pBadge').className = 'badge '+(running?'bok':'berr')
+  }catch(e){}
+}
+
+async function loadSystem(){
+  try{
+    const d = await api('GET','/api/system')
+    document.getElementById('dRam').textContent = d.ramUsed+'MB'
+    document.getElementById('dDisk').textContent = 'Disco: '+d.diskUsed+'/'+d.diskTotal
+  }catch(e){}
+}
+
+async function loadProxy(){
+  await loadProxyStatus()
+  loadLogs()
+}
+
+async function loadLogs(){
+  const lines = document.getElementById('logLines')?.value || 50
+  try{
+    const d = await api('GET',`/api/proxy/logs?lines=${lines}`)
+    const logs = d.logs||[]
+    const el = document.getElementById('proxyLogs')||document.getElementById('fullLogs')
+    el.innerHTML = logs.map(l=>{
+      const color = l.includes('200')?'log-ok':l.includes('404')||l.includes('Error')||l.includes('error')?'log-err':l.includes('Action')?'log-info':'log-info'
+      return `<div class="${color}">${esc(l)}</div>`
+    }).join('')
+    el.scrollTop = el.scrollHeight
+    // Full logs também
+    const fl = document.getElementById('fullLogs')
+    if(fl&&fl!==el) fl.innerHTML = el.innerHTML
+  }catch(e){}
+}
+
+async function proxyAction(action){
+  try{
+    const d = await api('POST',`/api/proxy/${action}`)
+    toast(d.message||'OK')
+    setTimeout(loadProxyStatus, 1500)
+  }catch(e){toast('Erro: '+e.message)}
+}
+
+async function loadConfig(){
+  try{
+    const d = await api('GET','/api/config')
+    const c = d.config || {}
+    document.getElementById('cfgDefaultDns').value = c.defaultDns || ''
+    document.getElementById('cfgDnsServers').value = (c.dnsServers || [c.defaultDns || '']).filter(Boolean).join('\n')
+    document.getElementById('cfgProxyUrl').value = c.proxyUrl || ''
+    document.getElementById('cfgTelemetryUrl').value = c.telemetryUrl || ''
+    document.getElementById('cfgGatewayUrl').value = c.gatewayUrl || ''
+    document.getElementById('cfgWebPlayerUrl').value = c.webPlayerUrl || ''
+    document.getElementById('cfgSwarmEnabled').value = String(c.swarmCloudEnabled === true)
+    document.getElementById('cfgSwarmUrl').value = c.swarmCloudUrl || ''
+    document.getElementById('cfgSwarmKey').value = c.swarmCloudKey || ''
+    document.getElementById('cfgSuperPeerUrl').value = c.superPeerUrl || ''
+    document.getElementById('cfgAppVersion').value = c.appVersion || ''
+    document.getElementById('cfgUpdateUrl').value = c.updateUrl || ''
+    document.getElementById('cfgSupportUrl').value = c.supportUrl || ''
+    document.getElementById('cfgAdminNote').value = c.adminNote || ''
+    document.getElementById('clientConfigBox').textContent = JSON.stringify({
+      defaultDns: c.defaultDns || '',
+      dnsServers: c.dnsServers || [],
+      proxyUrl: c.proxyUrl || '',
+      telemetryUrl: c.telemetryUrl || '',
+      gatewayUrl: c.gatewayUrl || '',
+      webPlayerUrl: c.webPlayerUrl || '',
+      swarmCloud: {
+        enabled: c.swarmCloudEnabled === true,
+        url: c.swarmCloudUrl || '',
+        superPeerUrl: c.superPeerUrl || ''
+      },
+      appVersion: c.appVersion || '',
+      updateUrl: c.updateUrl || '',
+      supportUrl: c.supportUrl || ''
+    }, null, 2)
+  }catch(e){toast('Erro ao carregar configurações')}
+}
+
+async function saveConfig(){
+  const body = {
+    defaultDns: document.getElementById('cfgDefaultDns').value,
+    dnsServers: document.getElementById('cfgDnsServers').value.split('\n').map(x=>x.trim()).filter(Boolean),
+    proxyUrl: document.getElementById('cfgProxyUrl').value,
+    telemetryUrl: document.getElementById('cfgTelemetryUrl').value,
+    gatewayUrl: document.getElementById('cfgGatewayUrl').value,
+    webPlayerUrl: document.getElementById('cfgWebPlayerUrl').value,
+    swarmCloudEnabled: document.getElementById('cfgSwarmEnabled').value === 'true',
+    swarmCloudUrl: document.getElementById('cfgSwarmUrl').value,
+    swarmCloudKey: document.getElementById('cfgSwarmKey').value,
+    superPeerUrl: document.getElementById('cfgSuperPeerUrl').value,
+    appVersion: document.getElementById('cfgAppVersion').value,
+    updateUrl: document.getElementById('cfgUpdateUrl').value,
+    supportUrl: document.getElementById('cfgSupportUrl').value,
+    adminNote: document.getElementById('cfgAdminNote').value
+  }
+  const d = await api('PUT','/api/config',body)
+  if(d.ok){
+    toast('Configurações salvas')
+    loadConfig()
+  }else{
+    toast(d.error || 'Erro ao salvar')
+  }
+}
+
+async function loadDevices(){
+  try{
+    const d = await api('GET','/api/devices')
+    const devs = d.devices||[]
+    deviceCache = devs
+    const online = devs.filter(x=>x.online).length
+    document.getElementById('dDevices').textContent = online
+    const devBadge = document.getElementById('devBadge')
+    if(devBadge) devBadge.textContent = online
+    renderDevices()
+
+    // Dashboard preview
+    const dd = document.getElementById('dashDevices')
+    const onlineDevs = devs.filter(x=>x.online).slice(0,5)
+    dd.innerHTML = onlineDevs.length ? `<table><thead><tr><th>Usuário</th><th>Assistindo</th><th>Velocidade</th><th>Status</th></tr></thead><tbody>${onlineDevs.map(d=>`<tr><td><b>${d.user||'—'}</b></td><td>${d.watching||'—'}</td><td>${d.speed||'—'}</td><td><span class="badge bok">Online</span></td></tr>`).join('')}</tbody></table>` : '<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px;">Nenhum dispositivo online</div>'
+  }catch(e){}
+}
+
+function renderDevices(){
+  const term = (document.getElementById('devSearch')?.value || '').toLowerCase()
+  const devs = deviceCache.filter(d => [d.user,d.mac,d.ip,d.localIp,d.proxyUrl,d.proxyLanUrl,d.serverDns,d.dns,d.version].join(' ').toLowerCase().includes(term))
+  const tbody = document.getElementById('devTable')
+  tbody.innerHTML = devs.length ? devs.map(d=>`<tr>
+    <td><b>${esc(d.user||'—')}</b></td>
+    <td style="font-family:monospace;font-size:10px;">${esc(d.mac||'—')}</td>
+    <td style="font-size:10px;color:var(--muted);">${esc((d.ip||'').replace('::ffff:',''))}</td>
+    <td style="font-size:10px;color:var(--muted);">${esc(d.localIp||'—')}</td>
+    <td style="font-size:10px;">${esc(d.proxyLanUrl||d.proxyUrl||'—')}</td>
+    <td>${esc(d.serverDns||d.dns||'—')}</td>
+    <td><span class="badge ${d.online?'bok':'boff'}">${d.online?'Online':'Offline'}</span></td>
+  </tr>`).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">Nenhum dispositivo encontrado</td></tr>'
+}
+
+async function loadUsers(){
+  await loadDevices()
+  await loadReports()
+  renderUsers()
+}
+
+function latestSpeedForUser(user){
+  return reportCache.find(r=>r.type==='speedtest'&&String(r.user||'')===String(user||'')) || null
+}
+
+function getUserRows(){
+  const map = new Map()
+  deviceCache.forEach(d=>{
+    const key=d.user||'sem-login'
+    if(!map.has(key))map.set(key,{user:key,devices:[],online:false})
+    const row=map.get(key)
+    row.devices.push(d)
+    row.online=row.online||!!d.online
+  })
+  reportCache.filter(r=>r.type==='speedtest').forEach(r=>{
+    const key=r.user||'sem-login'
+    if(!map.has(key))map.set(key,{user:key,devices:[],online:false})
+    map.get(key).speed=r
+  })
+  return [...map.values()].map(row=>{
+    const dev=row.devices.find(d=>d.online)||row.devices[0]||{}
+    const sp=row.speed||latestSpeedForUser(row.user)||{}
+    return {
+      ...row,
+      dev,
+      speed:sp,
+      publicIp:sp.publicIp||dev.ip||'',
+      localIp:dev.localIp||'',
+      onlineDevices:row.devices.filter(d=>d.online).length,
+      pingMs:sp.pingMs||'',
+      jitterMs:sp.jitterMs||'',
+      isp:sp.isp||sp.org||sp.asOrganization||'',
+      asn:sp.asn||sp.as||''
+    }
+  }).sort((a,b)=>Number(b.online)-Number(a.online)||a.user.localeCompare(b.user))
+}
+
+function renderUsers(){
+  const tbody=document.getElementById('userTable')
+  if(!tbody)return
+  const term=(document.getElementById('userSearch')?.value||'').toLowerCase()
+  const allRows=getUserRows()
+  const rows=allRows.filter(u=>{
+    const hay=[u.user,u.publicIp,u.localIp,u.isp,u.asn,u.speed?.quality,...u.devices.map(d=>[d.mac,d.deviceId,d.platform,d.watching].join(' '))].join(' ').toLowerCase()
+    return term ? hay.includes(term) : u.online
+  })
+  document.getElementById('userBadge').textContent=allRows.filter(u=>u.online).length
+  tbody.innerHTML=rows.length?rows.map(u=>`<tr onclick="showUserDetail(decodeURIComponent('${encodeURIComponent(u.user)}'))" style="cursor:pointer;">
+    <td><b>${esc(u.user)}</b></td>
+    <td style="font-family:monospace;font-size:10px;">${esc(u.dev.mac||'--')}</td>
+    <td><span class="badge ${u.online?'bok':'boff'}">${u.online?'Online':'Offline'}</span></td>
+    <td><b>${u.onlineDevices}</b> online / ${u.devices.length} total</td>
+    <td style="font-size:10px;color:var(--muted);">${esc(String(u.publicIp||'').replace('::ffff:',''))}</td>
+    <td style="font-size:10px;color:var(--muted);">${esc(u.localIp||'--')}</td>
+    <td>${u.pingMs?`${esc(u.pingMs)} ms`:'--'} ${u.jitterMs?`<span style="color:var(--muted);font-size:10px;">J ${esc(u.jitterMs)} ms</span>`:''}</td>
+    <td style="font-size:10px;">${esc([u.isp,u.asn].filter(Boolean).join(' / ')||'--')}</td>
+  </tr>`).join(''):`<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">${term?'Nenhum cliente encontrado':'Nenhum cliente online agora'}</td></tr>`
+}
+
+function flagFromCountryCode(code){
+  code=String(code||'').trim().toUpperCase()
+  if(!/^[A-Z]{2}$/.test(code))return '--'
+  return code.replace(/./g,c=>String.fromCodePoint(127397+c.charCodeAt(0)))
+}
+function countryLabel(dev){
+  const code=dev.countryCode||dev.country_code||dev.country
+  const flag=flagFromCountryCode(code)
+  if(flag==='--')return dev.countryName||dev.country||'--'
+  return flag+' '+(dev.countryName||code)
+}
+function latestSpeedForDevice(user, dev){
+  const ids=[dev.deviceId,dev.sessionId,dev.mac].filter(Boolean).map(String)
+  return reportCache.find(r=>r.type==='speedtest'&&String(r.user||'')===String(user||'')&&ids.some(id=>String(r.deviceId||r.sessionId||r.mac||'')===id)) || latestSpeedForUser(user) || {}
+}
+function classifyHardware(dev){
+  const explicit=dev.deviceProfile||dev.hardwareProfile||dev.profile
+  if(explicit)return explicit
+  const mem=Number(String(dev.memory||dev.ram||'').replace(/[^0-9.]/g,''))
+  const screen=String(dev.resolution||dev.screen||'')
+  const ua=String(dev.userAgent||'').toLowerCase()
+  if(mem>=6)return'Alta capacidade'
+  if(mem&&mem<2)return'Baixa capacidade'
+  if(/android|mobile|tv/.test(ua))return'Media capacidade'
+  if(screen)return'Media capacidade'
+  return'Em analise'
+}
+function classifyConnectionSimple(sp){
+  if(!sp||!sp.receivedAt)return'Nao testada'
+  const q=classifyQuality(sp)
+  if(q==='Excelente'||q==='Boa')return'Boa conexao'
+  if(q==='Regular')return'Conexao media'
+  return'Conexao ruim'
+}
+function badgeForConnection(label){
+  return label==='Boa conexao'?'bok':label==='Conexao ruim'?'boff':label==='Conexao media'?'bwarn':'boff'
+}
+function badgeForHardware(label){
+  return /Alta/i.test(label)?'bok':/Baixa/i.test(label)?'boff':/Media/i.test(label)?'bwarn':'boff'
+}
+
+function showUserDetail(user){
+  const row=getUserRows().find(u=>u.user===user)
+  if(!row)return
+  const card=document.getElementById('userDetailCard')
+  document.getElementById('userDetailTitle').textContent='Cliente: '+row.user
+  const s=row.speed||{}
+  const quality = s.receivedAt ? classifyQuality(s) : 'Aguardando'
+  const qColor = quality==='Excelente'||quality==='Boa' ? '#2ecc71' : quality==='Regular' ? '#f1c40f' : quality==='Ruim' ? '#ef4444' : 'var(--muted)'
+  const reportCount = reportCache.filter(r=>String(r.user||'')===String(row.user||'') && r.type!=='speedtest').length
+  const deviceRows = row.devices.map(dev=>{
+    const sp=latestSpeedForDevice(row.user,dev)
+    const name = dev.platform || (dev.webPlayer?'Web Player':'Desktop') || dev.os || dev.device || 'Dispositivo'
+    const id = dev.mac || dev.deviceId || dev.sessionId || '--'
+    const seen = dev.lastSeen ? new Date(dev.lastSeen).toLocaleString('pt-BR') : '--'
+    const hw=classifyHardware(dev)
+    const conn=classifyConnectionSimple(sp)
+    return '<tr>'+
+      '<td><span class="badge '+(dev.online?'bok':'boff')+'">'+(dev.online?'Online':'Offline')+'</span></td>'+
+      '<td><b>'+esc(name)+'</b><div class="device-sub">'+esc(id)+'</div></td>'+
+      '<td>'+esc(dev.watching||'--')+'</td>'+
+      '<td>'+esc(String(dev.ip||'--').replace('::ffff:',''))+'</td>'+
+      '<td>'+esc(countryLabel(dev))+'</td>'+
+      '<td>'+esc(dev.localIp||'--')+'</td>'+
+      '<td>'+esc(dev.dns||dev.serverDns||'--')+'</td>'+
+      '<td><span class="badge '+badgeForHardware(hw)+'">'+esc(hw)+'</span></td>'+
+      '<td><span class="badge '+badgeForConnection(conn)+'">'+esc(conn)+'</span></td>'+
+      '<td>'+esc(sp.downloadMbps ? (sp.downloadMbps+' Mbps') : '--')+'</td>'+
+      '<td>'+esc(sp.uploadMbps ? (sp.uploadMbps+' Mbps') : '--')+'</td>'+
+      '<td>'+esc(sp.pingMs ? (sp.pingMs+' ms') : '--')+'</td>'+
+      '<td>'+esc(sp.jitterMs ? (sp.jitterMs+' ms') : '--')+'</td>'+
+      '<td>'+esc(sp.packetLossPct!==undefined ? (sp.packetLossPct+'%') : '--')+'</td>'+
+      '<td style="font-size:10px;color:var(--muted);">'+esc(seen)+'</td>'+
+    '</tr>'
+  }).join('')
+  document.getElementById('userDetailBody').innerHTML=
+  '<div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px;">'+
+    '<div class="sc"><div class="sl">Status</div><div class="sv" style="font-size:18px;color:'+(row.online?'#2ecc71':'var(--muted)')+'">'+(row.online?'Online':'Offline')+'</div><div class="ss">Sessao atual</div></div>'+
+    '<div class="sc"><div class="sl">Dispositivos</div><div class="sv">'+row.onlineDevices+' / '+row.devices.length+'</div><div class="ss">Online / total</div></div>'+
+    '<div class="sc"><div class="sl">Qualidade</div><div class="sv" style="font-size:18px;color:'+qColor+'">'+esc(quality)+'</div><div class="ss">Conexao geral</div></div>'+
+    '<div class="sc"><div class="sl">Reports</div><div class="sv">'+reportCount+'</div><div class="ss">Falhas registradas</div></div>'+
+  '</div>'+
+  '<div class="card" style="margin-bottom:12px;"><div class="ch"><span class="ct">Dispositivos associados</span><button class="cb" onclick="requestClientSpeedTest(decodeURIComponent(\''+encodeURIComponent(row.user)+'\'))">Solicitar teste</button></div><div class="wide-table-wrap"><table class="wide-table"><thead><tr><th>Status</th><th>Dispositivo</th><th>Assistindo</th><th>IP publico</th><th>Pais</th><th>IP local</th><th>DNS</th><th>Hardware</th><th>Conexao</th><th>Download</th><th>Upload</th><th>Ping</th><th>Jitter</th><th>Perda</th><th>Ultimo ping</th></tr></thead><tbody>'+deviceRows+'</tbody></table></div></div>'
+  card.style.display='block'
+  card.scrollIntoView({block:'center',behavior:'smooth'})
+}
+
+async function loadSpeedTests(){
+  await loadReports()
+  renderSpeedTests()
+}
+
+async function requestClientSpeedTest(user=''){
+  const login = String(user || document.getElementById('speedClientLogin')?.value || '').trim()
+  if(!login){toast('Informe o login do cliente');return}
+  try{
+    const d = await api('POST','/api/client/speedtest',{user:login})
+    if(d.ok){
+      toast('Teste solicitado para '+login)
+      const input=document.getElementById('speedClientLogin')
+      if(input)input.value=login
+    }else toast(d.error||'Erro ao solicitar teste')
+  }catch(e){toast('Erro ao solicitar teste')}
+}
+
+function renderSpeedTests(){
+  const tbody=document.getElementById('speedTable')
+  if(!tbody)return
+  const term=(document.getElementById('speedSearch')?.value||'').toLowerCase()
+  const tests=reportCache.filter(r=>r.type==='speedtest').filter(r=>[r.user,r.publicIp,r.isp,r.asn,r.problem,r.quality].join(' ').toLowerCase().includes(term))
+  const speedBadge = document.getElementById('speedBadge')
+  if(speedBadge) speedBadge.textContent=tests.length
+  tbody.innerHTML=tests.length?tests.slice(0,100).map(r=>`<tr>
+    <td style="font-size:10px;color:var(--muted);">${new Date(r.receivedAt).toLocaleString('pt-BR')}</td>
+    <td><b>${esc(r.user||'--')}</b></td>
+    <td>${renderSpeedSummary(r)}</td>
+    <td>${r.downloadMbps?esc(r.downloadMbps)+' Mbps':'--'}</td>
+    <td>${r.uploadMbps?esc(r.uploadMbps)+' Mbps':'--'}</td>
+    <td>${r.pingMs?esc(r.pingMs)+' ms':'--'} / ${r.jitterMs?esc(r.jitterMs)+' ms':'--'}</td>
+    <td>${r.packetLossPct!==undefined?esc(r.packetLossPct)+'%':'--'}</td>
+    <td style="font-size:10px;">${esc([r.isp||r.org||r.asOrganization,r.asn||r.as].filter(Boolean).join(' / ')||'--')}</td>
+  </tr>`).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">Nenhum teste encontrado</td></tr>'
+}
+
+function fmtTraffic(kb){
+  const n = Number(kb || 0)
+  if(n >= 1024*1024) return (n/1024/1024).toFixed(2) + ' GB'
+  if(n >= 1024) return (n/1024).toFixed(2) + ' MB'
+  return Math.round(n) + ' KB'
+}
+
+async function loadP2P(){
+  try{
+    const d = await api('GET','/api/telemetry/p2p')
+    p2pCache = d || {summary:{},recent:[],topChannels:[]}
+    try{ superPeerCache = await api('GET','/api/p2p/super-peer') }catch(e){ superPeerCache = {running:false,error:e.message} }
+    renderP2P()
+  }catch(e){}
+}
+
+function renderP2P(){
+  const s = p2pCache.summary || {}
+  const setText = (id, value) => { const el=document.getElementById(id); if(el)el.textContent=value }
+  setText('p2pSessions', s.currentSessions || 0)
+  setText('p2pDown', fmtTraffic(s.p2pDown))
+  setText('p2pHttp', fmtTraffic(s.httpDown))
+  setText('p2pEfficiency', (Number(s.efficiency || 0)).toFixed(1).replace('.0','') + '%')
+  const sp = superPeerCache || {}
+  const spStatus = document.getElementById('p2pSuperStatus')
+  const spMeta = document.getElementById('p2pSuperMeta')
+  if(spStatus){
+    spStatus.textContent = sp.running ? 'Running' : 'Offline'
+    spStatus.style.color = sp.running ? '#2ecc71' : '#e74c3c'
+  }
+  if(spMeta){
+    spMeta.textContent = sp.running
+      ? `v${sp.version || '--'} • ${sp.currentPeers || 0} peers • ↑ ${Math.round(sp.currentUplink || 0)} KB/s`
+      : (sp.error || 'Sem resposta do Super Peer')
+  }
+
+  const recent = p2pCache.recent || []
+  const recentEl = document.getElementById('p2pRecent')
+  if(recentEl){
+    recentEl.innerHTML = recent.length ? `<table><thead><tr><th>Login</th><th>Canal</th><th>P2P</th><th>Origem</th><th>Status</th></tr></thead><tbody>` +
+      recent.slice(0,12).map(e => `<tr>
+        <td><b>${esc(e.user || 'sem-login')}</b><div style="color:var(--muted);font-size:11px;">${esc(e.platform || '')}</div></td>
+        <td>${esc(e.channel || e.channelId || '--')}</td>
+        <td>${fmtTraffic(e.p2pDown)}</td>
+        <td>${fmtTraffic(e.httpDown)}</td>
+        <td><span class="badge ${e.active?'bok':'boff'}">${e.active?'P2P ativo':esc(e.reason || 'sem dados')}</span></td>
+      </tr>`).join('') + '</tbody></table>' :
+      '<div style="padding:18px;color:var(--muted);">Nenhum dado P2P recebido ainda. Abra o web player de teste e toque um canal.</div>'
+  }
+
+  const topEl = document.getElementById('p2pTopChannels')
+  const top = p2pCache.topChannels || []
+  if(topEl){
+    topEl.innerHTML = top.length ? `<table><thead><tr><th>Canal</th><th>Sessões</th><th>P2P</th><th>Origem</th></tr></thead><tbody>` +
+      top.map(e => `<tr>
+        <td>${esc(e.channel || 'Sem canal')}</td>
+        <td>${e.sessions || 0}</td>
+        <td>${fmtTraffic(e.p2pDown)}</td>
+        <td>${fmtTraffic(e.httpDown)}</td>
+      </tr>`).join('') + '</tbody></table>' :
+      '<div style="padding:18px;color:var(--muted);">Aguardando tráfego por canal.</div>'
+  }
+}
+
+async function loadReports(){
+  try{
+    const d = await api('GET','/api/telemetry/reports')
+    const reps = d.reports||[]
+    reportCache = reps
+    document.getElementById('dReports').textContent = reps.filter(r=>{
+      const today = new Date().toDateString()
+      return new Date(r.receivedAt).toDateString()===today
+    }).length
+    document.getElementById('repBadge').textContent = reps.length
+    renderReports()
+    renderUsers()
+    renderSpeedTests()
+
+    const dr = document.getElementById('dashReports')
+    dr.innerHTML = reps.length ? `<table><thead><tr><th>Usuário</th><th>Tipo</th><th>Problema</th></tr></thead><tbody>${reps.slice(0,5).map(r=>`<tr><td><b>${r.user||'—'}</b></td><td>${r.type||'—'}</td><td>${(r.issues||[]).join(', ')}</td></tr>`).join('')}</tbody></table>` : '<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px;">Nenhum report ainda</div>'
+  }catch(e){}
+}
+
+function topCounts(rows, keyFn, limit=10){
+  const map = new Map()
+  rows.forEach(r=>{
+    const key = String(keyFn(r)||'').trim()
+    if(!key || key==='--') return
+    map.set(key,(map.get(key)||0)+1)
+  })
+  return [...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,limit)
+}
+
+function renderReportsInsights(){
+  const box=document.getElementById('reportsInsights')
+  if(!box)return
+  const contentEvents=reportCache.filter(r=>r.type==='watch_content'||r.type==='watch_channel')
+  const failures=reportCache.filter(r=>!['speedtest','watch_content','watch_channel','content_progress'].includes(r.type))
+  const speed=reportCache.filter(r=>r.type==='speedtest')
+  const watched=topCounts(deviceCache.filter(d=>d.online), d=>d.watching||d.channel, 10)
+  const hot=topCounts(contentEvents, r=>r.contentName||r.channelName||r.content, 10)
+  const failed=topCounts(failures, r=>r.content||r.problem, 10)
+  const users=topCounts(failures, r=>r.user, 10)
+  const survey=reportCache.filter(r=>r.type==='feedback'||r.type==='survey')
+  const list = (items,empty)=>items.length?items.map(([k,v])=>'<div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding:6px 0;"><span>'+esc(k)+'</span><b>'+v+'</b></div>').join(''):'<div style="color:var(--muted);font-size:12px;padding:8px 0;">'+empty+'</div>'
+  box.innerHTML = '<div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px;">'+
+    '<div class="sc"><div class="sl">Falhas</div><div class="sv">'+failures.length+'</div><div class="ss">Filmes, series e canais</div></div>'+
+    '<div class="sc"><div class="sl">Testes</div><div class="sv">'+speed.length+'</div><div class="ss">Velocidade recebida</div></div>'+
+    '<div class="sc"><div class="sl">Feedback</div><div class="sv">'+survey.length+'</div><div class="ss">Estrelas/comentarios</div></div>'+
+    '<div class="sc"><div class="sl">Assistindo agora</div><div class="sv">'+watched.length+'</div><div class="ss">Conteudos ativos</div></div>'+
+  '</div><div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:0;">'+
+    '<div class="card" style="margin:0;"><div class="ch"><span class="ct">HOT no IZ Play</span></div><div style="padding:8px 14px;">'+list(hot,'Aguardando reproducoes')+'</div></div>'+
+    '<div class="card" style="margin:0;"><div class="ch"><span class="ct">Top assistidos agora</span></div><div style="padding:8px 14px;">'+list(watched,'Sem dados de audiencia agora')+'</div></div>'+
+    '<div class="card" style="margin:0;"><div class="ch"><span class="ct">Mais reportados</span></div><div style="padding:8px 14px;">'+list(failed,'Sem falhas reportadas')+'</div></div>'+
+    '<div class="card" style="margin:0;"><div class="ch"><span class="ct">Clientes com falhas</span></div><div style="padding:8px 14px;">'+list(users,'Sem clientes com falhas')+'</div></div>'+
+  '</div>'
+}
+function renderReports(){
+  renderReportsInsights()
+  const term = (document.getElementById('repSearch')?.value || '').toLowerCase()
+  const type = document.getElementById('repType')?.value || ''
+  const reps = reportCache.filter(r => {
+    const matchesType = !type || r.type === type
+    const matchesTerm = [r.user,r.type,r.content,r.problem,r.details,r.interpretation,(r.issues||[]).join(' '),r.ip,r.publicIp].join(' ').toLowerCase().includes(term)
+    return matchesType && matchesTerm
+  })
+  const tbody = document.getElementById('repTable')
+  tbody.innerHTML = reps.length ? reps.slice(0,50).map(r=>`<tr>
+    <td style="font-size:10px;color:var(--muted);">${new Date(r.receivedAt).toLocaleTimeString('pt-BR')}</td>
+    <td><b>${esc(r.user||'--')}</b></td>
+    <td><span class="badge ${r.type==='speedtest'?'bwarn':r.type==='canal'?'boff':r.type==='filme'?'bwarn':'boff'}">${esc(r.type||'--')}</span></td>
+    <td>${r.type==='speedtest'?renderSpeedSummary(r):esc(r.content||r.problem||'--')}</td>
+    <td style="font-size:10px;">${r.type==='speedtest'?renderSpeedDetails(r):esc((r.issues||[]).join(', ')||r.details||'')}</td>
+    <td style="font-size:10px;color:var(--muted);">${esc((r.ip||'').replace('::ffff:',''))}</td>
+  </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Nenhum report encontrado</td></tr>'
+}
+
+function renderSpeedSummary(r){
+  const cls = r.quality==='boa'?'bok':(r.quality==='ruim'?'boff':'bwarn')
+  return `<div style="display:flex;flex-direction:column;gap:4px;">
+    <b>${esc(r.problem||'Teste de velocidade')}</b>
+    <span class="badge ${cls}" style="width:max-content;">${esc(r.quality||'diagnostico')}</span>
+    <span style="font-size:10px;color:var(--muted);">${esc(r.interpretation||'')}</span>
+  </div>`
+}
+
+function renderSpeedDetails(r){
+  const items=[
+    ['Download',r.downloadMbps?`${r.downloadMbps} Mbps`:'--'],
+    ['Upload',r.uploadMbps?`${r.uploadMbps} Mbps`:'--'],
+    ['Ping',r.pingMs?`${r.pingMs} ms`:'--'],
+    ['Jitter',r.jitterMs?`${r.jitterMs} ms`:'--'],
+    ['Perda',r.packetLossPct!==undefined?`${r.packetLossPct}%`:'--'],
+    ['DNS',r.dns||'--'],
+    ['IP publico',r.publicIp||'--'],
+    ['Cloudflare',r.serverColo||'--']
+  ]
+  return `<div style="display:grid;grid-template-columns:repeat(2,minmax(90px,1fr));gap:4px 10px;">${items.map(([k,v])=>`<span><b>${esc(k)}:</b> ${esc(v)}</span>`).join('')}</div>`
+}
+
+function classifyQuality(r){
+  const ping = Number(r.pingMs || 0)
+  const jitter = Number(r.jitterMs || 0)
+  const down = Number(r.downloadMbps || 0)
+  const loss = Number(r.packetLossPct || 0)
+  if(r.quality === 'ruim' || loss > 2 || ping > 120 || jitter > 45 || (down && down < 15)) return 'Ruim'
+  if(r.quality === 'boa' && ping < 55 && jitter < 20 && (!down || down >= 30)) return 'Excelente'
+  if(ping > 80 || jitter > 30 || (down && down < 25)) return 'Regular'
+  return 'Boa'
+}
+
+function buildDiagnostics(){
+  const recentSpeed = reportCache.filter(r=>r.type==='speedtest').slice(0,200)
+  const slow = recentSpeed.filter(r=>Number(r.downloadMbps||0) && Number(r.downloadMbps||0) < 20).length
+  const jitter = recentSpeed.filter(r=>Number(r.jitterMs||0) > 30).length
+  const weak = recentSpeed.filter(r=>Number(r.pingMs||0) > 90).length
+  const memory = reportCache.filter(r=>String([r.problem,r.details,(r.issues||[]).join(' ')].join(' ')).toLowerCase().includes('mem')).length
+  const reconnect = reportCache.filter(r=>String([r.problem,r.details,(r.issues||[]).join(' ')].join(' ')).toLowerCase().includes('recon')).length
+  return [
+    {title:'Internet lenta detectada',count:slow,color:'#ef4444',icon:'!',hint:'clientes'},
+    {title:'Jitter elevado',count:jitter,color:'#f97316',icon:'~',hint:'clientes'},
+    {title:'Wi-Fi fraco ou ping alto',count:weak,color:'#facc15',icon:'≋',hint:'clientes'},
+    {title:'Dispositivo com pouca memoria',count:memory,color:'#38bdf8',icon:'▣',hint:'eventos'},
+    {title:'Reconexoes frequentes',count:reconnect,color:'#a855f7',icon:'↻',hint:'eventos'}
+  ]
+}
+
+function renderDiagnostics(){
+  const alerts = buildDiagnostics()
+  const html = alerts.map(a=>`<div class="alert-row">
+    <div class="alert-ico" style="color:${a.color};">${a.icon}</div>
+    <div class="alert-title">${esc(a.title)}</div>
+    <div class="alert-count" style="color:${a.color};">${a.count} ${a.hint}</div>
+    <div style="color:${a.color};font-size:20px;">›</div>
+  </div>`).join('')
+  const dash = document.getElementById('dashAlerts')
+  const diag = document.getElementById('diagList')
+  if(dash) dash.innerHTML = html
+  if(diag) diag.innerHTML = html
+  const total = alerts.reduce((sum,a)=>sum+a.count,0)
+  const badge = document.getElementById('diagBadge')
+  if(badge) badge.textContent = total
+}
+
+function renderLegend(target, rows){
+  const total = rows.reduce((s,r)=>s+r.value,0) || 1
+  document.getElementById(target).innerHTML = rows.map(r=>`<div class="legend-row">
+    <span class="legend-dot" style="background:${r.color}"></span>
+    <span>${esc(r.label)}</span>
+    <b>${Math.round((r.value/total)*100)}%</b>
+    <span style="color:var(--muted);">${r.value}</span>
+  </div>`).join('')
+}
+
+function updateDashboardModern(){
+  const online = deviceCache.filter(d=>d.online)
+  const users = getUserRows()
+  const onlineUsers = users.filter(u=>u.online)
+  const speedTests = reportCache.filter(r=>r.type==='speedtest')
+  const latestByUser = new Map()
+  speedTests.forEach(r=>{ if(!latestByUser.has(r.user)) latestByUser.set(r.user,r) })
+  const qualities = [...latestByUser.values()].map(classifyQuality)
+  const scoreMap = {Excelente:100,Boa:85,Regular:62,Ruim:35}
+  const score = qualities.length ? Math.round(qualities.reduce((sum,q)=>sum+(scoreMap[q]||60),0) / qualities.length) : (online.length ? 92 : 100)
+
+  document.getElementById('dActiveUsers').childNodes[0].textContent = String(onlineUsers.length) + ' '
+  document.getElementById('dDevicesModern').textContent = online.length
+  document.getElementById('dHealthScore').textContent = score + '%'
+  document.getElementById('dHealthLabel').textContent = score >= 90 ? 'Excelente' : score >= 75 ? 'Boa' : score >= 55 ? 'Regular' : 'Critica'
+
+  const userTable = onlineUsers.slice(0,6).map(u=>{
+    const s = u.speed || {}
+    const quality = classifyQuality(s)
+    const qClass = quality==='Excelente'||quality==='Boa' ? 'bok' : quality==='Regular' ? 'bwarn' : 'berr'
+    return `<tr><td><b>${esc(u.user)}</b><div style="color:var(--muted);font-size:11px;">${esc(u.dev.platform||u.dev.os||'Dispositivo')}</div></td><td>${esc(u.dev.watching||u.dev.channel||'--')}</td><td><span class="badge ${qClass}">${quality.toUpperCase()}</span></td><td>${s.downloadMbps?esc(s.downloadMbps)+' Mbps':'--'}</td><td><span class="badge bok">Online</span></td></tr>`
+  }).join('')
+  document.getElementById('dashUsersModern').innerHTML = onlineUsers.length ? `<table><thead><tr><th>Login</th><th>Canal</th><th>Qualidade</th><th>Velocidade</th><th>Status</th></tr></thead><tbody>${userTable}</tbody></table>` : '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px;">Nenhum usuario online agora</div>'
+
+  renderDiagnostics()
+}
+
+let toastT=null
+function toast(msg){
+  const el=document.getElementById('toast');el.textContent='✓ '+msg;el.style.display='block'
+  if(toastT)clearTimeout(toastT);toastT=setTimeout(()=>el.style.display='none',3000)
+}
+
+// ── INIT ──
+if(token){
+  fetch('/api/proxy/status',{headers:{'x-session-token':token}})
+    .then(r=>{if(r.ok){document.getElementById('screenLogin').style.display='none';document.getElementById('app').style.display='flex';loadAll();setInterval(loadAll,30000)}})
+    .catch(()=>{})
+}
+</script>
+</body>
+</html>

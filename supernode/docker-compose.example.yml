@@ -1,0 +1,26 @@
+# Exemplo de orquestracao na MESMA VPS (Gateway/Web Player), mantendo o Super Node
+# como um SERVICO INDEPENDENTE — para poder mover para outra VPS no futuro sem
+# tocar no resto. Ajuste os nomes/redes conforme seu deploy atual.
+version: "3.8"
+
+services:
+  # gateway e webplayer sao ilustrativos — encaixe nos seus servicos reais.
+  # gateway:
+  #   image: izplay/gateway
+  # webplayer:
+  #   image: izplay/webplayer
+
+  supernode:
+    build: .
+    # ou: image: izplay/supernode
+    restart: unless-stopped
+    env_file: .env
+    # 4GB e apertado com Chromium: limite e comece com poucos canais
+    mem_limit: 2600m
+    shm_size: "1gb" # importante p/ Chromium (evita crashes de /dev/shm)
+    # depends_on: [gateway]
+    # networks: [izplay]
+
+# networks:
+#   izplay:
+#     external: true

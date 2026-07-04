@@ -1,0 +1,239 @@
+server {
+    server_name _ web.izplay.tv izplay.tv www.izplay.tv;
+
+    root /var/www/izplay-web;
+    index index.html;
+
+    client_max_body_size 50m;
+
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy no-referrer-when-downgrade always;
+
+    location = /gateway/player_api.php {
+        proxy_pass http://130.250.189.142:3001/player_api.php$is_args$args;
+        proxy_http_version 1.1;
+        proxy_set_header Host 130.250.189.142;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+        proxy_buffering off;
+        add_header Cache-Control "no-store" always;
+    }
+
+    location /gateway/ {
+        proxy_pass http://130.250.189.142:3001/;
+        proxy_http_version 1.1;
+        proxy_set_header Host 130.250.189.142;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Prefix /gateway;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_buffering off;
+    }
+
+    location = /player_api.php {
+        proxy_pass http://130.250.189.142:3001/player_api.php$is_args$args;
+        proxy_http_version 1.1;
+        proxy_set_header Host 130.250.189.142;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Prefix /gateway;
+    }
+
+    location = /get.php {
+        proxy_pass http://130.250.189.142:3001/get.php$is_args$args;
+        proxy_http_version 1.1;
+        proxy_set_header Host 130.250.189.142;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Prefix /gateway;
+    }
+
+    location /live/ {
+        proxy_pass http://130.250.189.142:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host 130.250.189.142;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Prefix /gateway;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_buffering off;
+    }
+
+    location /movie/ {
+        proxy_pass http://130.250.189.142:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host 130.250.189.142;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Prefix /gateway;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_buffering off;
+    }
+
+    location /series/ {
+        proxy_pass http://130.250.189.142:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host 130.250.189.142;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Prefix /gateway;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_buffering off;
+    }
+
+    location /asset {
+        proxy_pass http://130.250.189.142:3001/asset$is_args$args;
+        proxy_http_version 1.1;
+        proxy_set_header Host 130.250.189.142;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Prefix /gateway;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_buffering off;
+    }
+
+
+
+    location ^~ /player/vendor/ {
+        alias /var/www/izplay-web/vendor/;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000" always;
+    }
+
+    location ^~ /player/assets/ {
+        alias /var/www/izplay-web/assets/;
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800" always;
+    }
+
+    location ^~ /player/icons/ {
+        alias /var/www/izplay-web/icons/;
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800" always;
+    }
+
+    location = /player/manifest.json {
+        alias /var/www/izplay-web/manifest.json;
+        add_header Cache-Control "no-cache" always;
+    }
+
+    location = /player/service-worker.js {
+        alias /var/www/izplay-web/service-worker.js;
+        add_header Cache-Control "no-store" always;
+        add_header Service-Worker-Allowed "/player/" always;
+    }
+    location = /player {
+        return 301 /player/;
+    }
+
+    location ^~ /player/ {
+        alias /var/www/izplay-web/;
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+    }
+
+    location /control/ {
+        proxy_pass http://130.250.189.142:3001/;
+        proxy_http_version 1.1;
+        proxy_set_header Host 130.250.189.142;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Prefix /control;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_buffering off;
+        add_header Cache-Control "no-store" always;
+    }
+    location /epg/ {
+        proxy_pass http://209.50.254.197/epg/;
+        proxy_read_timeout 60s;
+        proxy_buffering on;
+        add_header Cache-Control "no-store" always;
+    }
+
+    location = /service-worker.js {
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0";
+        try_files $uri =404;
+    }
+
+    location = /sw-v23.js {
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0";
+        try_files $uri =404;
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0";
+        try_files $uri =404;
+    }
+
+    location /video-gateway/ {
+        proxy_pass http://209.50.254.197/;
+        proxy_http_version 1.1;
+        proxy_set_header Host 209.50.254.197;
+        proxy_set_header Accept-Encoding "";
+        proxy_read_timeout 3600s;
+        proxy_buffering off;
+        sub_filter_once off;
+        sub_filter_types application/vnd.apple.mpegurl application/x-mpegURL text/plain;
+        sub_filter "http://209.50.254.197/proxy?url=" "https://web.izplay.tv/video-gateway/proxy?url=";
+        sub_filter "https%3A%2F%2F130.250.189.142%2Fgateway%2Fasset" "https%3A%2F%2Fweb.izplay.tv%2Fasset";
+        add_header Cache-Control "no-store" always;
+    }
+
+    location /hls/ {
+        proxy_pass http://209.50.254.197/hls/;
+        proxy_http_version 1.1;
+        proxy_set_header Host 209.50.254.197;
+        proxy_read_timeout 3600s;
+        proxy_buffering off;
+        add_header Cache-Control "no-store" always;
+    }
+    location / {
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0";
+        try_files $uri $uri/ /index.html;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|webp|json)$ {
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800";
+        try_files $uri =404;
+    }
+
+    listen [::]:443 ssl ipv6only=on; # managed by Certbot
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/web.izplay.tv/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/web.izplay.tv/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+}
+server {
+    if ($host = web.izplay.tv) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _ web.izplay.tv izplay.tv www.izplay.tv;
+    return 404; # managed by Certbot
+
+
+}

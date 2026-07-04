@@ -1,0 +1,16 @@
+{
+  "name": "iz-play-app",
+  "version": "2.1.0",
+  "description": "IZ Play - App desktop Electron",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^40.10.2"
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@ffprobe-installer/ffprobe": "^2.1.2"
+  }
+}

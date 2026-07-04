@@ -1,0 +1,16 @@
+{
+  "name": "izplay-supernode",
+  "version": "0.1.0",
+  "description": "IZ Play Super Node — peer permanente da malha SwarmCloud para os canais mais assistidos",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "puppeteer": "^23.6.0"
+  }
+}

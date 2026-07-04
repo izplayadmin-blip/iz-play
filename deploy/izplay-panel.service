@@ -1,0 +1,22 @@
+[Unit]
+Description=IZ Play v2.1 Control Panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/izplay-v2.1/panel
+EnvironmentFile=/etc/izplay/panel.env
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/izplay-v2.1/panel/data
+
+[Install]
+WantedBy=multi-user.target

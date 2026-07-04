@@ -1,0 +1,12 @@
+{
+  "name": "izplay-panel",
+  "version": "2.1.0",
+  "description": "IZ Play v2.1 - Painel de Gerenciamento",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

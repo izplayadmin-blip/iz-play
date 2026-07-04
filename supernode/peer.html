@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>IZ Super Node — Peer</title>
+</head>
+<body style="margin:0;background:#000;color:#0f0;font:11px monospace">
+<!-- Video mudo/minusculo so para dirigir a bufferizacao do hls.js (segmentos
+     que o engine SwarmCloud vai redistribuir). Nada e exibido para usuarios. -->
+<video id="v" muted playsinline autoplay style="width:160px;height:90px"></video>
+<pre id="log"></pre>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search)
+  var src = q.get('src')
+  var channelId = q.get('channelId')
+  var appId = q.get('appId')
+  var token = q.get('token')
+  var zone = q.get('zone')
+  var sdk = q.get('sdk') || 'https://web.izplay.tv/player/vendor/swarmcloud-hls.min.js'
+  var logEl = document.getElementById('log')
+  function log(m) {
+    // vai para o console (capturado pelo index.js via page.on('console'))
+    console.log('[' + channelId + '] ' + m)
+    logEl.textContent = (new Date().toISOString() + ' ' + m + '\n' + logEl.textContent).slice(0, 3000)
+  }
+
+  var s = document.createElement('script')
+  s.src = sdk
+  s.onload = start
+  s.onerror = function () { log('falha ao carregar SDK') }
+  document.head.appendChild(s)
+
+  function start() {
+    if (!window.Hls || !Hls.isSupported()) { log('Hls indisponivel/sem MSE'); return }
+    if (!Hls.WEBRTC_SUPPORT) { log('SDK sem WebRTC — sem P2P') }
+
+    // channelId FIXO = channel_id. Precisa bater com o channelId dos clientes para
+    // o super node entrar no MESMO swarm. (Ver nota "channelId" no README.)
+    var p2pConfig = {
+      live: true,
+      logLevel: 'warn',
+      channelId: function () { return 'live-' + channelId },  // MESMO esquema do cliente (selectLive)
+      getStats: function (p2pDown, p2pUp, httpDown) {
+        log('stats p2pDown=' + Math.round(p2pDown) + 'KB up=' + Math.round(p2pUp) + 'KB http=' + Math.round(httpDown) + 'KB')
+      }
+    }
+    if (token) p2pConfig.token = token
+    if (appId) p2pConfig.appId = appId
+    if (zone) p2pConfig.trackerZone = zone
+
+    var hls = new Hls({
+      liveSyncDurationCount: 3,
+      // buffer curto: um super node so precisa dos segmentos recentes p/ semear
+      backBufferLength: 30,
+      maxBufferLength: 20,
+      p2pConfig: p2pConfig
+    })
+    var v = document.getElementById('v')
+    hls.loadSource(src)
+    hls.attachMedia(v)
+    hls.on(Hls.Events.MANIFEST_PARSED, function () { v.play().catch(function () {}) })
+    hls.on(Hls.Events.ERROR, function (_, d) {
+      if (d && d.fatal) {
+        log('erro fatal ' + (d.details || d.type))
+        // tenta se recuperar sem derrubar a aba
+        setTimeout(function () { try { hls.startLoad() } catch (e) {} }, 3000)
+      }
+    })
+    try {
+      if (hls.p2pEngine && hls.p2pEngine.on) {
+        hls.p2pEngine.on('peerId', function (id) { log('peerId=' + id) })
+        hls.p2pEngine.on('peers', function (ps) { log('peers=' + (ps && ps.length || 0)) })
+      }
+    } catch (e) {}
+    log('peer iniciado (appId=' + appId + ' zona=' + zone + ')')
+
+    // mantem vivo: se a aba pausar (aba oculta), retoma
+    setInterval(function () { if (v.paused) v.play().catch(function () {}) }, 15000)
+  }
+})();
+</script>
+</body>
+</html>
