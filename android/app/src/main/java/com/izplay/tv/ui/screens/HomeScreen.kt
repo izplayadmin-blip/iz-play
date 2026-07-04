@@ -194,7 +194,7 @@ private fun HeroBanner(title: String, subtitle: String, imageUrl: String?, onWat
     Box(
         Modifier
             .fillMaxWidth()
-            .height(280.dp)
+            .height(320.dp) // altura oficial do Hero (hero.md)
             .background(PanelDarker)
     ) {
         if (!imageUrl.isNullOrBlank()) {
@@ -221,11 +221,11 @@ private fun HeroBanner(title: String, subtitle: String, imageUrl: String?, onWat
                 .padding(start = PAGE_PADDING, end = 24.dp)
                 .widthIn(max = 720.dp)
         ) {
-            Text("CONTINUE ASSISTINDO", color = IzYellow, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+            Text("CONTINUE ASSISTINDO", color = IzYellow, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
             Spacer(Modifier.height(10.dp))
-            Text(title, color = TextPrimary, fontSize = 40.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(10.dp))
-            Text(subtitle, color = TextSecondary, fontSize = 15.sp, maxLines = 2)
+            Text(title, color = TextPrimary, fontSize = 48.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis) // título 48sp (hero.md)
+            Spacer(Modifier.height(12.dp))
+            Text(subtitle, color = TextSecondary, fontSize = 16.sp, maxLines = 3, overflow = TextOverflow.Ellipsis) // descrição 16sp máx 3 linhas
             Spacer(Modifier.height(18.dp))
             Row(Modifier.focusGroup(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 HeroButton("Assistir", Icons.Filled.PlayArrow, Color.White, Color.Black, onWatch)
@@ -237,9 +237,9 @@ private fun HeroBanner(title: String, subtitle: String, imageUrl: String?, onWat
 
 @Composable
 private fun HeroButton(label: String, icon: ImageVector, background: Color, foreground: Color, onClick: () -> Unit) {
-    TvCard(onClick = onClick, shape = RoundedCornerShape(8.dp)) {
+    TvCard(onClick = onClick, shape = RoundedCornerShape(8.dp), focusScale = 1.03f) {
         Row(
-            Modifier.height(46.dp).background(background).padding(horizontal = 20.dp),
+            Modifier.height(48.dp).background(background).padding(horizontal = 22.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(icon, null, tint = foreground, modifier = Modifier.size(19.dp))
@@ -251,7 +251,7 @@ private fun HeroButton(label: String, icon: ImageVector, background: Color, fore
 
 @Composable
 private fun QuickAction(label: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    TvCard(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(14.dp)) {
+    TvCard(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(12.dp), focusScale = 1.03f) {
         Row(
             Modifier
                 .fillMaxWidth()
@@ -317,9 +317,9 @@ private fun ChannelTile(channel: Channel, onClick: () -> Unit) {
 
 @Composable
 private fun PosterTile(title: String, imageUrl: String?, rating: String?, onClick: () -> Unit) {
-    TvCard(onClick = onClick) {
-        Column(Modifier.width(134.dp).background(PanelElevated)) {
-            Box(Modifier.fillMaxWidth().height(190.dp).background(Color.Black)) {
+    TvCard(onClick = onClick) { // radius 18 + escala 1.08 (movie-card.md)
+        Column(Modifier.width(150.dp).background(PanelElevated)) {
+            Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).background(Color.Black)) { // poster 2:3 (igual web)
                 if (!imageUrl.isNullOrBlank()) {
                     AsyncImage(model = imageUrl, contentDescription = title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 } else {
