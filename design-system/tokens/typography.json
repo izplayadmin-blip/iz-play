@@ -1,0 +1,20 @@
+{
+  "fontFamily": "Inter",
+  "fallback": "-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+  "sizes": {
+    "hero": 48,
+    "title": 40,
+    "subtitle": 24,
+    "category": 20,
+    "card": 18,
+    "body": 16,
+    "description": 14,
+    "caption": 12
+  },
+  "weights": {
+    "regular": 400,
+    "medium": 500,
+    "bold": 700,
+    "black": 900
+  }
+}

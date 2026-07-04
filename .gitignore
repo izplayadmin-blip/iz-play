@@ -25,6 +25,7 @@ app/ffmpeg-master-latest-win64-gpl-shared/
 *.bak-*
 *.tmp
 tmp/
+.tmp-docs-review/
 releases/
 deploy/backups/
 .DS_Store

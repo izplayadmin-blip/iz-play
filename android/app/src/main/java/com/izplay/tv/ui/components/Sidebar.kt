@@ -2,7 +2,10 @@ package com.izplay.tv.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -34,6 +37,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import com.izplay.tv.ui.theme.IzRed
 import com.izplay.tv.ui.theme.IzRedDark
 import com.izplay.tv.ui.theme.IzRedDeep
+import com.izplay.tv.ui.theme.SurfaceHover
 import com.izplay.tv.ui.theme.TextPrimary
 
 enum class NavItem(val label: String, val icon: ImageVector) {
@@ -66,8 +71,9 @@ private val NAV_ORDER = listOf(
     NavItem.USUARIOS
 )
 
-private val COLLAPSED_WIDTH = 80.dp
-private val EXPANDED_WIDTH = 236.dp
+// Larguras oficiais (design-system/components/sidebar.md): recolhida 72dp, expandida 240dp.
+private val COLLAPSED_WIDTH = 72.dp
+private val EXPANDED_WIDTH = 240.dp
 
 /**
  * Sidebar retrátil no estilo web/desktop: colapsada mostra só os ícones; ao receber foco
@@ -84,7 +90,11 @@ fun Sidebar(
 ) {
     // Expande quando qualquer item da sidebar está focado (TV) — igual ao hover do desktop.
     var expanded by remember { mutableStateOf(false) }
-    val width by animateDpAsState(if (expanded) EXPANDED_WIDTH else COLLAPSED_WIDTH, label = "sidebarWidth")
+    val width by animateDpAsState(
+        if (expanded) EXPANDED_WIDTH else COLLAPSED_WIDTH,
+        animationSpec = tween(250), // 250ms ease-in-out (sidebar.md)
+        label = "sidebarWidth"
+    )
 
     val firstFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
@@ -125,7 +135,7 @@ fun Sidebar(
                 onClick = { onSelect(item) },
                 modifier = if (item == NavItem.INICIO) Modifier.focusRequester(firstFocus) else Modifier
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(12.dp)) // espaçamento oficial entre itens (sidebar.md)
         }
 
         Spacer(Modifier.weight(1f))
@@ -161,22 +171,27 @@ private fun NavRow(
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
 
+    // Focus Android TV (sidebar.md): borda vermelha + escala 1.03. Hover/ativo: surfaceHover.
     val bg by animateColorAsState(
         when {
-            focused -> Color.White.copy(alpha = 0.22f)
-            active -> Color.Black.copy(alpha = 0.30f)
+            focused -> SurfaceHover
+            active -> IzRed.copy(alpha = 0.18f)
             else -> Color.Transparent
         },
         label = "navBg"
     )
+    val scale by animateFloatAsState(if (focused) 1.03f else 1f, animationSpec = tween(150), label = "navScale")
+    val shape = RoundedCornerShape(12.dp)
 
     Row(
         modifier
             .fillMaxWidth()
-            .padding(horizontal = 10.dp)
-            .height(46.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .height(48.dp)
+            .clip(shape)
             .background(bg)
+            .then(if (focused) Modifier.border(2.dp, IzRed, shape) else Modifier)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = if (expanded) 14.dp else 0.dp),
         horizontalArrangement = if (expanded) Arrangement.Start else Arrangement.Center,
@@ -185,16 +200,16 @@ private fun NavRow(
         Icon(
             item.icon,
             contentDescription = item.label,
-            tint = if (focused || active) TextPrimary else TextPrimary.copy(alpha = 0.82f),
-            modifier = Modifier.size(26.dp)
+            tint = if (focused || active) TextPrimary else TextPrimary.copy(alpha = 0.85f),
+            modifier = Modifier.size(24.dp) // ícones 24dp (sidebar.md)
         )
         if (expanded) {
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(16.dp))
             Text(
                 item.label,
-                color = if (focused || active) TextPrimary else TextPrimary.copy(alpha = 0.82f),
-                fontWeight = if (active || focused) FontWeight.ExtraBold else FontWeight.SemiBold,
-                fontSize = 14.sp,
+                color = if (focused || active) TextPrimary else TextPrimary.copy(alpha = 0.85f),
+                fontWeight = if (active || focused) FontWeight.Bold else FontWeight.Medium,
+                fontSize = 18.sp, // texto 18sp Inter Medium (sidebar.md)
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

@@ -10,19 +10,24 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Paleta inspirada na referência IZ Play
-val IzRed = Color(0xFFD81F26)
-val IzRedDark = Color(0xFF8E1419)
-val IzRedDeep = Color(0xFF5A0C10)
-val IzYellow = Color(0xFFFFB000)
-val PanelBlack = Color(0xFF0A0A0C)
-val PanelDark = Color(0xFF121215)
-val PanelDarker = Color(0xFF0E0E11)
-val PanelElevated = Color(0xFF17171C)
-val RowSelected = Color(0xFF2A1416)
-val TextPrimary = Color(0xFFF5F5F7)
-val TextSecondary = Color(0xFF9A9AA2)
-val Divider = Color(0xFF1E1E22)
+// Tokens oficiais do IZ Play Design System v1.0 (design-system/tokens/colors.json)
+// cruzados com o CSS real do Web Player (--red #cc0000, --bg #0a0a0a, --txt #f0f0f0, --muted #888).
+val IzRed = Color(0xFFCC0000)        // primary
+val IzRedHover = Color(0xFFE60000)   // primaryHover
+val IzRedSoft = Color(0xFFFF3333)    // primarySoft
+val IzRedDark = Color(0xFF990000)
+val IzRedDeep = Color(0xFF5A0000)
+val IzYellow = Color(0xFFF5A623)     // destaque "AO VIVO/HOT" (âmbar)
+val PanelBlack = Color(0xFF0A0A0A)   // background (Web --bg)
+val PanelDark = Color(0xFF111111)    // surface
+val PanelDarker = Color(0xFF0D0D0D)
+val PanelElevated = Color(0xFF181818) // surface2
+val SurfaceHover = Color(0xFF1B1B1B) // surfaceHover
+val RowSelected = Color(0xFF2A0E0E)  // linha ativa (tint vermelho)
+val TextPrimary = Color(0xFFF0F0F0)  // textPrimary (Web --txt)
+val TextSecondary = Color(0xFFA8A8A8) // textSecondary
+val Muted = Color(0xFF888888)        // muted (Web --muted)
+val Divider = Color(0xFF2A2A2A)      // border
 
 private val IzColors = darkColorScheme(
     primary = IzRed,

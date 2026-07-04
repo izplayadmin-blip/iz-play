@@ -1,0 +1,10 @@
+{
+  "fast": 150,
+  "normal": 200,
+  "sidebar": 250,
+  "max": 300,
+  "scaleCard": 1.05,
+  "scaleCardFocus": 1.08,
+  "scaleButtonFocus": 1.03,
+  "scaleSidebarFocus": 1.02
+}
