@@ -5,6 +5,7 @@ const path = require('path')
 const crypto = require('crypto')
 const http = require('http')
 const https = require('https')
+const { createCollector } = require('./lib/xui/collector')
 
 const app = express()
 const PORT = Number(process.env.PANEL_PORT || process.env.PORT || 3000)
@@ -14,6 +15,8 @@ const DEVICES_FILE = path.join(DATA_DIR, 'devices.json')
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json')
 const COMMANDS_FILE = path.join(DATA_DIR, 'commands.json')
 const P2P_FILE = path.join(DATA_DIR, 'p2p.json')
+const UPDATES_FILE = path.join(DATA_DIR, 'updates.json')
+const APK_DIR = path.join(DATA_DIR, 'apks')
 
 // ── CONFIG ──────────────────────────────────────────────────────────────────
 const ADMIN_USER = process.env.PANEL_USER || 'admin'
@@ -28,6 +31,11 @@ if (!ADMIN_PASS && process.env.NODE_ENV === 'production') {
 }
 
 fs.mkdirSync(DATA_DIR, { recursive: true })
+fs.mkdirSync(APK_DIR, { recursive: true })
+const xuiCollector = createCollector({
+  dataDir: DATA_DIR,
+  intervalMs: Math.max(15000, Number(process.env.XUI_SYNC_INTERVAL_MS || 60000))
+})
 
 const DEFAULT_CONFIG = {
   defaultDns: process.env.DEFAULT_DNS || '',
@@ -43,11 +51,13 @@ const DEFAULT_CONFIG = {
   swarmCloudKey: process.env.SWARM_CLOUD_TOKEN || '',
   swarmCloudAppId: process.env.SWARM_CLOUD_APP_ID || '',
   superPeerUrl: process.env.SUPER_PEER_URL || 'http://209.14.85.55:8080',
+  vpnServers: [],
   appVersion: process.env.APP_VERSION || '2.1.0',
   updateUrl: process.env.UPDATE_URL || '',
   supportUrl: process.env.SUPPORT_URL || '',
   adminNote: ''
 }
+const DEFAULT_CATALOG_UPSTREAMS = ['http://ortyu.online']
 
 function loadJson(file, fallback) {
   try {
@@ -101,6 +111,7 @@ function normalizeConfig(input) {
     : String(cfg.dnsServers || cfg.defaultDns || '').split('\n')
   const cleanDnsServers = [...new Set(dnsServers.map(s => String(s || '').trim()).filter(Boolean))].slice(0, 10)
   if (!cleanDnsServers.length && cfg.defaultDns) cleanDnsServers.push(String(cfg.defaultDns).trim())
+  const vpnServers = Array.isArray(cfg.vpnServers) ? cfg.vpnServers : []
   return {
     defaultDns: String(cfg.defaultDns || cleanDnsServers[0] || '').trim(),
     dnsServers: cleanDnsServers,
@@ -115,6 +126,14 @@ function normalizeConfig(input) {
     swarmCloudKey: String(cfg.swarmCloudKey || '').trim().slice(0, 200),
     swarmCloudAppId: String(cfg.swarmCloudAppId || '').trim().slice(0, 120),
     superPeerUrl: String(cfg.superPeerUrl || '').trim().slice(0, 300),
+    vpnServers: vpnServers.map(server => ({
+      id: String(server.id || '').trim().slice(0, 80),
+      name: String(server.name || '').trim().slice(0, 120),
+      country: String(server.country || '').trim().slice(0, 20),
+      url: String(server.url || '').trim().replace(/\/+$/, '').slice(0, 300),
+      endpoint: String(server.endpoint || '').trim().slice(0, 120),
+      subnet: String(server.subnet || '').trim().slice(0, 80)
+    })).filter(server => server.id && server.url).slice(0, 20),
     appVersion: String(cfg.appVersion || '').trim(),
     updateUrl: String(cfg.updateUrl || '').trim(),
     supportUrl: String(cfg.supportUrl || '').trim(),
@@ -125,22 +144,58 @@ function normalizeConfig(input) {
 let panelConfig = normalizeConfig(loadJson(CONFIG_FILE, DEFAULT_CONFIG))
 saveJson(CONFIG_FILE, panelConfig)
 let clientCommands = loadJson(COMMANDS_FILE, [])
+let appUpdates = loadJson(UPDATES_FILE, {})
+
+const UPDATE_PLATFORMS = new Set(['android-mobile', 'android-tv'])
+const UPDATE_CHANNELS = new Set(['internal', 'reseller', 'production'])
+
+function updateKey(platform, channel) {
+  return `${platform}:${channel}`
+}
+
+function normalizeUpdateRelease(input, platform, channel) {
+  const versionCode = Number(input?.versionCode)
+  const versionName = String(input?.versionName || '').trim().slice(0, 40)
+  const downloadUrl = String(input?.downloadUrl || '').trim().slice(0, 500)
+  const sha256 = String(input?.sha256 || '').trim().toLowerCase()
+  if (!Number.isSafeInteger(versionCode) || versionCode < 1) throw new Error('versionCode inválido')
+  if (!versionName) throw new Error('versionName é obrigatório')
+  if (!downloadUrl.startsWith('https://') && !downloadUrl.startsWith('/downloads/')) {
+    throw new Error('downloadUrl deve usar HTTPS ou /downloads/')
+  }
+  if (sha256 && !/^[a-f0-9]{64}$/.test(sha256)) throw new Error('sha256 inválido')
+  return {
+    platform,
+    channel,
+    versionCode,
+    versionName,
+    minimumVersionCode: Math.max(1, Number(input?.minimumVersionCode || 1)),
+    mandatory: input?.mandatory === true,
+    downloadUrl,
+    sha256,
+    fileSize: Math.max(0, Number(input?.fileSize || 0)),
+    releaseNotes: safeText(input?.releaseNotes || '', 1500),
+    enabled: input?.enabled !== false,
+    publishedAt: new Date().toISOString()
+  }
+}
 
 function probeProxyUrl(callback) {
   if (!panelConfig.proxyUrl) return callback(null, { running: false })
   try {
     const url = new URL(panelConfig.proxyUrl)
+    const healthPath = String(process.env.PROXY_HEALTH_PATH || '/health').trim() || '/health'
     const client = url.protocol === 'https:' ? https : http
     const req = client.request({
       hostname: url.hostname,
       port: url.port || (url.protocol === 'https:' ? 443 : 80),
-      path: '/iptv.m3u',
+      path: healthPath.startsWith('/') ? healthPath : `/${healthPath}`,
       method: 'GET',
       timeout: 2500
     }, res => {
       res.resume()
       callback(null, {
-        running: res.statusCode >= 200 && res.statusCode < 500,
+        running: res.statusCode >= 200 && res.statusCode < 300,
         status: `http_${res.statusCode}`,
         remote: true,
         proxyUrl: panelConfig.proxyUrl,
@@ -155,7 +210,7 @@ function probeProxyUrl(callback) {
   }
 }
 
-function fetchJsonUrl(targetUrl, timeoutMs = 3500) {
+function fetchJsonUrl(targetUrl, timeoutMs = 3500, headers = {}) {
   return new Promise((resolve, reject) => {
     try {
       const url = new URL(targetUrl)
@@ -165,6 +220,7 @@ function fetchJsonUrl(targetUrl, timeoutMs = 3500) {
         port: url.port || (url.protocol === 'https:' ? 443 : 80),
         path: `${url.pathname || '/'}${url.search || ''}`,
         method: 'GET',
+        headers,
         timeout: timeoutMs
       }, res => {
         let body = ''
@@ -191,6 +247,70 @@ function fetchJsonUrl(targetUrl, timeoutMs = 3500) {
   })
 }
 
+function allowedCatalogPath(pathname) {
+  if (/^\/(?:live|movie|series)\//i.test(pathname)) return true
+  return [
+    '/player_api.php',
+    '/get.php',
+    '/xmltv.php',
+    '/iptv.m3u'
+  ].includes(pathname)
+}
+
+function catalogUpstreams() {
+  const envUpstreams = String(process.env.CATALOG_UPSTREAMS || '').split(',')
+  return [...new Set([
+    ...envUpstreams,
+    ...panelConfig.dnsServers,
+    panelConfig.defaultDns,
+    ...DEFAULT_CATALOG_UPSTREAMS
+  ].map(value => String(value || '').trim().replace(/\/+$/, '')).filter(Boolean))]
+}
+
+function pipeCatalogEmergency(req, res, upstreams, catalogPath, queryString, lastError) {
+  const upstream = upstreams.shift()
+  if (!upstream) {
+    return res.status(502).json({
+      ok: false,
+      error: 'catalog_emergency_unavailable',
+      message: 'Catálogo de emergência indisponível',
+      detail: lastError ? lastError.message : ''
+    })
+  }
+
+  let target
+  try {
+    target = new URL(upstream + catalogPath)
+    if (queryString) target.search = queryString
+  } catch (err) {
+    return pipeCatalogEmergency(req, res, upstreams, catalogPath, queryString, err)
+  }
+
+  const client = target.protocol === 'https:' ? https : http
+  const upstreamReq = client.request(target, {
+    method: 'GET',
+    timeout: 18000,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 IZPlay-Panel-Catalog/2.1',
+      'Accept': req.headers.accept || '*/*'
+    }
+  }, upstreamRes => {
+    const statusCode = upstreamRes.statusCode || 502
+    if ([403, 404, 429, 500, 502, 503, 504].includes(statusCode) && upstreams.length) {
+      upstreamRes.resume()
+      return pipeCatalogEmergency(req, res, upstreams, catalogPath, queryString, new Error(`upstream_http_${statusCode}`))
+    }
+    res.setHeader('Cache-Control', 'no-store')
+    res.setHeader('Content-Type', upstreamRes.headers['content-type'] || 'application/json; charset=utf-8')
+    res.status(statusCode)
+    upstreamRes.pipe(res)
+  })
+  upstreamReq.on('timeout', () => upstreamReq.destroy(new Error('upstream_timeout')))
+  upstreamReq.on('error', err => pipeCatalogEmergency(req, res, upstreams, catalogPath, queryString, err))
+  req.on('close', () => upstreamReq.destroy())
+  upstreamReq.end()
+}
+
 app.disable('x-powered-by')
 app.set('trust proxy', process.env.PANEL_TRUST_PROXY === '0' ? false : 1)
 app.use((req, res, next) => {
@@ -210,6 +330,15 @@ app.use((req, res, next) => {
 })
 app.use(express.json({ limit: '256kb' }))
 app.use(express.urlencoded({ extended: true }))
+app.use('/downloads', express.static(APK_DIR, {
+  fallthrough: false,
+  immutable: true,
+  maxAge: '1d',
+  setHeaders: res => {
+    res.setHeader('Content-Disposition', 'attachment')
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+  }
+}))
 app.use(express.static(path.join(__dirname, 'public')))
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'))
@@ -356,11 +485,174 @@ app.get('/api/config', requireAuth, (req, res) => {
   res.json({ config: panelConfig })
 })
 
+// XuiOne is read-only from this panel. Credentials remain server-side and are
+// never included in these responses.
+app.get('/api/xui/config', requireAuth, (req, res) => {
+  res.json({ config: xuiCollector.getPublicConfig() })
+})
+
+app.get('/api/xui/overview', requireAuth, (req, res) => {
+  res.json(xuiCollector.overview())
+})
+
+app.get('/api/xui/state', requireAuth, (req, res) => {
+  const state = xuiCollector.getState()
+  res.json({
+    status: state.status,
+    lastAttemptAt: state.lastAttemptAt,
+    lastSuccessAt: state.lastSuccessAt,
+    lastError: state.lastError,
+    capabilities: state.capabilities,
+    data: state.data
+  })
+})
+
+app.post('/api/xui/sync', requireAuth, async (req, res) => {
+  try {
+    await xuiCollector.sync()
+    res.json({ ok: true, overview: xuiCollector.overview() })
+  } catch (error) {
+    console.error('[xui] sync manual:', error.message)
+    res.status(502).json({ ok: false, error: 'Falha ao sincronizar com o XuiOne' })
+  }
+})
+
+function validSuperNodeFeedToken(value) {
+  const expected = String(process.env.SUPERNODE_FEED_TOKEN || '')
+  const supplied = String(value || '')
+  if (!expected || supplied.length !== expected.length) return false
+  return crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))
+}
+
+// Feed privado consumido pelo Super Node. A resposta contém somente ID, nome
+// e audiência agregada; nenhuma credencial ou dado de assinante sai do painel.
+app.get('/api/supernode/top-channels', (req, res) => {
+  const authorization = String(req.headers.authorization || '')
+  const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : req.headers['x-supernode-token']
+  if (!validSuperNodeFeedToken(token)) return res.status(401).json({ error: 'Não autorizado' })
+  const limit = Math.max(1, Math.min(10, Number(req.query.limit || 10)))
+  const overview = xuiCollector.overview()
+  res.setHeader('Cache-Control', 'no-store')
+  res.json({
+    generatedAt: new Date().toISOString(),
+    source: 'xuione',
+    status: overview.status,
+    channels: (overview.topStreams || []).slice(0, limit).map(stream => ({
+      channel_id: String(stream.id || ''),
+      name: String(stream.name || ''),
+      viewers: Number(stream.viewers || 0),
+      online: stream.online === true
+    }))
+  })
+})
+
+app.get('/api/p2p/super-node', requireAuth, async (req, res) => {
+  const base = String(process.env.SUPERNODE_STATUS_URL || '').replace(/\/+$/, '')
+  if (!base) return res.json({ running: false, status: 'not_configured' })
+  try {
+    const result = await fetchJsonUrl(`${base}/status`, 5000)
+    res.status(result.ok ? 200 : 502).json({
+      running: result.ok,
+      statusCode: result.statusCode,
+      ...(result.json || {})
+    })
+  } catch (error) {
+    res.status(502).json({ running: false, url: base, error: error.message })
+  }
+})
+
 app.put('/api/config', requireAuth, (req, res) => {
   panelConfig = normalizeConfig(req.body || {})
   saveJson(CONFIG_FILE, panelConfig)
   res.json({ ok: true, config: panelConfig })
 })
+
+// Metadados públicos de atualização. O APK nunca recebe credenciais do painel.
+app.get('/api/client/updates/:platform', (req, res) => {
+  const platform = String(req.params.platform || '').trim()
+  const channel = String(req.query.channel || 'production').trim()
+  const currentVersionCode = Math.max(0, Number(req.query.versionCode || 0))
+  if (!UPDATE_PLATFORMS.has(platform) || !UPDATE_CHANNELS.has(channel)) {
+    return res.status(400).json({ error: 'Plataforma ou canal inválido' })
+  }
+  const release = appUpdates[updateKey(platform, channel)]
+  res.setHeader('Cache-Control', 'no-store')
+  if (!release || release.enabled === false) {
+    return res.json({ updateAvailable: false, platform, channel })
+  }
+  const updateAvailable = release.versionCode > currentVersionCode
+  res.json({
+    updateAvailable,
+    mandatory: updateAvailable && (
+      release.mandatory === true ||
+      currentVersionCode < Number(release.minimumVersionCode || 1)
+    ),
+    ...release
+  })
+})
+
+app.get('/api/updates', requireAuth, (req, res) => {
+  res.json({ releases: Object.values(appUpdates) })
+})
+
+app.put('/api/updates/:platform/:channel', requireAuth, (req, res) => {
+  const platform = String(req.params.platform || '').trim()
+  const channel = String(req.params.channel || '').trim()
+  if (!UPDATE_PLATFORMS.has(platform) || !UPDATE_CHANNELS.has(channel)) {
+    return res.status(400).json({ error: 'Plataforma ou canal inválido' })
+  }
+  try {
+    const release = normalizeUpdateRelease(req.body, platform, channel)
+    appUpdates[updateKey(platform, channel)] = release
+    saveJson(UPDATES_FILE, appUpdates)
+    res.json({ ok: true, release })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
+app.post(
+  '/api/updates/:platform/:channel/apk',
+  requireAuth,
+  express.raw({
+    type: ['application/vnd.android.package-archive', 'application/octet-stream'],
+    limit: '150mb'
+  }),
+  (req, res) => {
+    const platform = String(req.params.platform || '').trim()
+    const channel = String(req.params.channel || '').trim()
+    if (!UPDATE_PLATFORMS.has(platform) || !UPDATE_CHANNELS.has(channel)) {
+      return res.status(400).json({ error: 'Plataforma ou canal inválido' })
+    }
+    if (!Buffer.isBuffer(req.body) || req.body.length < 1024) {
+      return res.status(400).json({ error: 'APK não recebido' })
+    }
+    try {
+      const versionCode = Number(req.query.versionCode)
+      const versionName = String(req.query.versionName || '').trim()
+      const fileName = `${platform}-${channel}-${versionCode}.apk`
+      const target = path.join(APK_DIR, fileName)
+      fs.writeFileSync(target, req.body, { mode: 0o640 })
+      const sha256 = crypto.createHash('sha256').update(req.body).digest('hex')
+      const release = normalizeUpdateRelease({
+        versionCode,
+        versionName,
+        minimumVersionCode: req.query.minimumVersionCode,
+        mandatory: String(req.query.mandatory || '') === 'true',
+        releaseNotes: req.query.releaseNotes,
+        downloadUrl: `/downloads/${fileName}`,
+        sha256,
+        fileSize: req.body.length,
+        enabled: true
+      }, platform, channel)
+      appUpdates[updateKey(platform, channel)] = release
+      saveJson(UPDATES_FILE, appUpdates)
+      res.status(201).json({ ok: true, release })
+    } catch (error) {
+      res.status(400).json({ error: error.message })
+    }
+  }
+)
 
 app.get('/api/client/config', (req, res) => {
   res.json({
@@ -380,10 +672,21 @@ app.get('/api/client/config', (req, res) => {
       appId: panelConfig.swarmCloudAppId,
       superPeerUrl: panelConfig.superPeerUrl
     },
+    vpnServers: panelConfig.vpnServers,
     appVersion: panelConfig.appVersion,
     updateUrl: panelConfig.updateUrl,
     supportUrl: panelConfig.supportUrl
   })
+})
+
+app.get('/api/client/catalog/*', (req, res) => {
+  const prefix = '/api/client/catalog'
+  const catalogPath = req.path.slice(prefix.length) || '/'
+  if (!allowedCatalogPath(catalogPath)) {
+    return res.status(404).json({ ok: false, error: 'not_found' })
+  }
+  const queryString = (req.originalUrl.split('?')[1] || '').trim()
+  pipeCatalogEmergency(req, res, catalogUpstreams(), catalogPath, queryString)
 })
 
 function contentEventRows(maxAgeMs = 30 * 24 * 60 * 60 * 1000) {
@@ -515,6 +818,8 @@ app.post('/api/telemetry/p2p', (req, res) => {
     deviceId: String(body.deviceId || body.sessionId || '').slice(0, 120),
     channel: String(body.channel || body.watching || '').slice(0, 160),
     channelId: String(body.channelId || '').slice(0, 80),
+    swarmId: String(body.swarmId || '').slice(0, 120),
+    peers: Math.max(0, Number(body.peers || 0)),
     p2pDown: Number(body.p2pDown || 0),
     p2pUp: Number(body.p2pUp || 0),
     httpDown: Number(body.httpDown || 0),
@@ -535,7 +840,7 @@ app.post('/api/telemetry/p2p', (req, res) => {
   res.json({ ok: true })
 })
 
-app.get('/api/telemetry/p2p', requireAuth, (req, res) => {
+app.get('/api/telemetry/p2p', requireAuth, async (req, res) => {
   const now = Date.now()
   const recent = p2pEvents.filter(e => now - Number(e.lastSeen || 0) < 5 * 60 * 1000)
   const todayKey = new Date().toISOString().slice(0, 10)
@@ -550,18 +855,49 @@ app.get('/api/telemetry/p2p', requireAuth, (req, res) => {
     row.httpDown += Number(e.httpDown || 0)
     byChannel.set(key, row)
   }
-  const p2pDown = sum(today, 'p2pDown')
-  const httpDown = sum(today, 'httpDown')
+  let superNode = null
+  const superNodeBase = String(process.env.SUPERNODE_STATUS_URL || '').replace(/\/+$/, '')
+  if (superNodeBase) {
+    try {
+      const result = await fetchJsonUrl(`${superNodeBase}/status`, 4000)
+      if (result.ok) superNode = result.json || null
+    } catch (_) {}
+  }
+  const nodeChannels = Array.isArray(superNode?.channels) ? superNode.channels : []
+  for (const channel of nodeChannels) {
+    const key = channel.name || channel.channel_id || 'Sem canal'
+    const row = byChannel.get(key) || { channel: key, sessions: 0, p2pDown: 0, httpDown: 0 }
+    row.sessions += 1
+    row.p2pDown += Number(channel.p2pDownKB || 0)
+    row.httpDown += Number(channel.httpDownKB || 0)
+    byChannel.set(key, row)
+  }
+  const nodeTotals = superNode?.totals || {}
+  const p2pDown = sum(today, 'p2pDown') + Number(nodeTotals.p2pDownKB || 0)
+  const httpDown = sum(today, 'httpDown') + Number(nodeTotals.httpDownKB || 0)
   const total = p2pDown + httpDown
   res.json({
     summary: {
-      currentSessions: recent.length,
+      currentSessions: Number(nodeTotals.peers || 0)
+        + recent.filter(e => Number(e.p2pDown || 0) > 0 || Number(e.p2pUp || 0) > 0).length,
+      configuredSessions: recent.filter(e => e.active).length,
+      seededChannels: Number(superNode?.activeChannels || 0),
       eventsToday: today.length,
       p2pDown,
       httpDown,
       efficiency: total ? Math.round((p2pDown / total) * 1000) / 10 : 0
     },
     recent: p2pEvents.slice(0, 100),
+    superNode: superNode ? {
+      running: superNode.status === 'running',
+      status: superNode.status,
+      activeChannels: Number(superNode.activeChannels || 0),
+      peers: Number(nodeTotals.peers || 0),
+      p2pUp: Number(nodeTotals.p2pUpKB || 0),
+      p2pDown: Number(nodeTotals.p2pDownKB || 0),
+      httpDown: Number(nodeTotals.httpDownKB || 0),
+      system: superNode.system || {}
+    } : { running: false },
     topChannels: [...byChannel.values()]
       .sort((a, b) => (b.p2pDown + b.httpDown) - (a.p2pDown + a.httpDown))
       .slice(0, 12)
@@ -572,7 +908,12 @@ app.get('/api/p2p/super-peer', requireAuth, async (req, res) => {
   const base = String(panelConfig.superPeerUrl || '').replace(/\/+$/, '')
   if (!base) return res.json({ running: false, error: 'Super Peer não configurado' })
   try {
-    const result = await fetchJsonUrl(`${base}/stats`)
+    const accessToken = String(process.env.SUPER_PEER_ACCESS_TOKEN || '')
+    const result = await fetchJsonUrl(
+      `${base}/stats`,
+      3500,
+      accessToken ? { 'x-access-token': accessToken } : {}
+    )
     const stats = result.json || {}
     const master = stats.master || {}
     const workers = stats.workers || {}
@@ -593,6 +934,42 @@ app.get('/api/p2p/super-peer', requireAuth, async (req, res) => {
   } catch (err) {
     res.json({ running: false, url: base, error: err.message })
   }
+})
+
+app.get('/api/vpn/status', requireAuth, async (req, res) => {
+  const servers = Array.isArray(panelConfig.vpnServers) ? panelConfig.vpnServers : []
+  const results = await Promise.all(servers.map(async server => {
+    const base = String(server.url || '').replace(/\/+$/, '')
+    try {
+      const result = await fetchJsonUrl(`${base}/status`, 5000)
+      const status = result.json || {}
+      return {
+        ...server,
+        running: result.ok && status.ok !== false,
+        statusCode: result.statusCode,
+        online: Number(status.online || 0),
+        totalPeers: Number(status.totalPeers || 0),
+        listenPort: Number(status.listenPort || 0),
+        checkedAt: status.checkedAt || null,
+        peers: Array.isArray(status.peers) ? status.peers : []
+      }
+    } catch (err) {
+      return {
+        ...server,
+        running: false,
+        online: 0,
+        totalPeers: 0,
+        error: err.message
+      }
+    }
+  }))
+
+  res.json({
+    ok: true,
+    totalOnline: results.reduce((sum, server) => sum + Number(server.online || 0), 0),
+    totalPeers: results.reduce((sum, server) => sum + Number(server.totalPeers || 0), 0),
+    servers: results
+  })
 })
 
 // Ping de telemetria: guarda multiplos dispositivos por login
@@ -639,6 +1016,8 @@ app.get('/api/devices', requireAuth, (req, res) => {
 })
 
 // ── START ─────────────────────────────────────────────────────────────────────
+xuiCollector.start()
+
 app.listen(PORT, () => {
   console.log(`[painel] Rodando na porta ${PORT}`)
   console.log(`[painel] Usuário: ${ADMIN_USER}`)

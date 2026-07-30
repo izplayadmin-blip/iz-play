@@ -154,6 +154,7 @@ tr:hover td{background:rgba(255,255,255,.015);}
       <div class="sbi on" onclick="sv('dash')"><span class="sbi-ico">⌂</span><span class="sbi-lbl">Dashboard</span></div>
       <div class="sbi" onclick="sv('users')"><span class="sbi-ico">☷</span><span class="sbi-lbl">Clientes</span><span class="sbi-badge" id="userBadge">0</span></div>
       <div class="sb-sec">Sistema</div>
+      <div class="sbi" onclick="sv('xui')"><span class="sbi-ico">X</span><span class="sbi-lbl">XuiOne</span><span class="sbi-badge" id="xuiBadge">--</span></div>
       <div class="sbi" onclick="sv('proxy')"><span class="sbi-ico">◎</span><span class="sbi-lbl">Proxy</span></div>
       <div class="sbi" onclick="sv('p2p')"><span class="sbi-ico">◌</span><span class="sbi-lbl">P2P</span></div>
       <div class="sbi" onclick="sv('reports')"><span class="sbi-ico">▤</span><span class="sbi-lbl">Reports</span><span class="sbi-badge" id="repBadge">0</span></div>
@@ -364,6 +365,30 @@ tr:hover td{background:rgba(255,255,255,.015);}
         </div>
       </div>
 
+      <!-- XUIONE -->
+      <div class="view" id="v-xui">
+        <div class="sg">
+          <div class="sc" style="--accent:var(--green)"><div class="sl">Conexões ao vivo</div><div class="sv" id="xuiConnections">0</div><div class="ss">Sessões no XuiOne</div></div>
+          <div class="sc" style="--accent:var(--blue)"><div class="sl">Streams online</div><div class="sv" id="xuiStreamsOnline">0</div><div class="ss" id="xuiStreamsTotal">0 cadastradas</div></div>
+          <div class="sc" style="--accent:var(--purple)"><div class="sl">Servidores online</div><div class="sv" id="xuiServersOnline">0</div><div class="ss" id="xuiServersTotal">0 cadastrados</div></div>
+          <div class="sc" style="--accent:var(--orange)"><div class="sl">Erros de stream</div><div class="sv" id="xuiErrors">0</div><div class="ss">Snapshot atual</div></div>
+        </div>
+        <div class="card">
+          <div class="ch">
+            <div><span class="ct">XuiOne Main Server</span><div class="ss" id="xuiMeta">Carregando integração...</div></div>
+            <button class="cb" id="xuiSyncBtn" onclick="syncXui()">Sincronizar agora</button>
+          </div>
+          <div id="xuiCapabilities" style="padding:14px 16px;"></div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="ct">Streams com mais espectadores</span></div>
+          <table>
+            <thead><tr><th>Stream</th><th>Status</th><th>Servidor</th><th>Espectadores</th></tr></thead>
+            <tbody id="xuiStreamTable"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;">Aguardando sincronização</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- CONFIGURACOES -->
       <div class="view" id="v-settings">
         <div class="sg2">
@@ -449,7 +474,7 @@ let deviceCache = []
 let reportCache = []
 let p2pCache = {summary:{},recent:[],topChannels:[]}
 let superPeerCache = {running:false}
-const titles = {dash:'Dashboard',proxy:'Proxy',p2p:'P2P / SwarmCloud',users:'Clientes',reports:'Reports',logs:'Logs',settings:'Configuracoes'}
+const titles = {dash:'Dashboard',proxy:'Proxy',xui:'XuiOne',p2p:'P2P / SwarmCloud',users:'Clientes',reports:'Reports',logs:'Logs',settings:'Configuracoes'}
 
 
 function esc(v){
@@ -507,6 +532,7 @@ function sv(v){
   document.getElementById('tbt').textContent=titles[v]||v
   document.querySelector(`.sbi[onclick="sv('${v}')"]`)?.classList.add('on')
   if(v==='proxy')loadProxy()
+  if(v==='xui')loadXui()
   if(v==='p2p')loadP2P()
   if(v==='users')loadUsers()
   if(v==='diagnostics')renderDiagnostics()
@@ -522,9 +548,66 @@ async function loadAll(){
   loadDevices()
   loadReports()
   loadP2P()
+  loadXui()
   renderUsers()
   renderSpeedTests()
   setTimeout(updateDashboardModern, 250)
+}
+
+function xuiStatusLabel(status){
+  return ({online:'Online',partial:'Parcial',error:'Erro',not_configured:'Não configurado',actions_not_configured:'Ações não configuradas'})[status] || status || '--'
+}
+
+async function loadXui(){
+  try{
+    const [overview,state,publicCfg] = await Promise.all([
+      api('GET','/api/xui/overview'),
+      api('GET','/api/xui/state'),
+      api('GET','/api/xui/config')
+    ])
+    const totals = overview.totals || {}
+    document.getElementById('xuiConnections').textContent = totals.connections || 0
+    document.getElementById('xuiStreamsOnline').textContent = totals.streamsOnline || 0
+    document.getElementById('xuiStreamsTotal').textContent = `${totals.streams || 0} cadastradas`
+    document.getElementById('xuiServersOnline').textContent = totals.serversOnline || 0
+    document.getElementById('xuiServersTotal').textContent = `${totals.servers || 0} cadastrados`
+    document.getElementById('xuiErrors').textContent = totals.streamErrors || 0
+    const badge = document.getElementById('xuiBadge')
+    badge.textContent = overview.status === 'online' ? 'ON' : overview.status === 'partial' ? '!' : 'OFF'
+    badge.style.background = overview.status === 'online' ? 'var(--green)' : overview.status === 'partial' ? 'var(--orange)' : 'var(--red)'
+    const cfg = publicCfg.config || {}
+    const updated = overview.lastSuccessAt ? new Date(overview.lastSuccessAt).toLocaleString('pt-BR') : 'ainda não sincronizado'
+    document.getElementById('xuiMeta').textContent = `${xuiStatusLabel(overview.status)} · ${cfg.baseUrl || 'servidor não configurado'} · ${updated}`
+    const caps = state.capabilities || {}
+    document.getElementById('xuiCapabilities').innerHTML = Object.entries({
+      connections:'Conexões',streams:'Streams',servers:'Servidores',streamErrors:'Erros'
+    }).map(([key,name])=>{
+      const cap = caps[key] || {}
+      const klass = cap.available ? 'bok' : cap.configured ? 'berr' : 'boff'
+      return `<span class="badge ${klass}" style="margin-right:8px">${esc(name)}: ${cap.available?'disponível':cap.configured?'indisponível':'aguardando'}</span>`
+    }).join('') + (overview.lastError ? `<div class="log-err" style="margin-top:12px">${esc(overview.lastError)}</div>` : '')
+    const rows = overview.topStreams || []
+    document.getElementById('xuiStreamTable').innerHTML = rows.length ? rows.map(stream=>`<tr>
+      <td>${esc(stream.name || `Stream ${stream.id || ''}`)}</td>
+      <td><span class="badge ${stream.online?'bok':'boff'}">${stream.online?'Online':'Offline'}</span></td>
+      <td>${esc(stream.serverId || '--')}</td><td>${Number(stream.viewers || 0)}</td>
+    </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;">Nenhuma stream retornada</td></tr>'
+  }catch(e){
+    document.getElementById('xuiMeta').textContent = 'Falha ao carregar o status do XuiOne'
+  }
+}
+
+async function syncXui(){
+  const btn = document.getElementById('xuiSyncBtn')
+  btn.disabled = true
+  btn.textContent = 'Sincronizando...'
+  try{
+    const result = await api('POST','/api/xui/sync')
+    if(!result.ok) throw new Error(result.error || 'Falha na sincronização')
+    await loadXui()
+    toast('XuiOne sincronizado')
+  }catch(e){toast(e.message || 'Falha ao sincronizar XuiOne')}
+  finally{btn.disabled=false;btn.textContent='Sincronizar agora'}
 }
 
 async function loadProxyStatus(){
@@ -671,7 +754,11 @@ async function loadDevices(){
     // Dashboard preview
     const dd = document.getElementById('dashDevices')
     const onlineDevs = devs.filter(x=>x.online).slice(0,5)
-    dd.innerHTML = onlineDevs.length ? `<table><thead><tr><th>Usuário</th><th>Assistindo</th><th>Velocidade</th><th>Status</th></tr></thead><tbody>${onlineDevs.map(d=>`<tr><td><b>${d.user||'—'}</b></td><td>${d.watching||'—'}</td><td>${d.speed||'—'}</td><td><span class="badge bok">Online</span></td></tr>`).join('')}</tbody></table>` : '<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px;">Nenhum dispositivo online</div>'
+    dd.innerHTML = onlineDevs.length ? `<table><thead><tr><th>Usuário</th><th>Assistindo</th><th>Qualidade</th><th>Velocidade</th><th>Status</th></tr></thead><tbody>${onlineDevs.map(d=>{
+      const quality=String(d.quality||'sem teste').toUpperCase()
+      const speed=Number(d.downloadMbps||d.speed?.downloadMbps||0)
+      return `<tr><td><b>${esc(d.user||'—')}</b><div style="color:var(--muted);font-size:11px;">${esc(d.deviceProfile||d.platform||'Android TV')}</div></td><td>${esc(d.watching||d.channelName||'—')}</td><td>${esc(quality)}</td><td>${speed?`${speed.toFixed(1)} Mbps`:'—'}</td><td><span class="badge bok">Online</span></td></tr>`
+    }).join('')}</tbody></table>` : '<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px;">Nenhum dispositivo online</div>'
   }catch(e){}
 }
 
@@ -918,13 +1005,16 @@ function renderP2P(){
   const recentEl = document.getElementById('p2pRecent')
   if(recentEl){
     recentEl.innerHTML = recent.length ? `<table><thead><tr><th>Login</th><th>Canal</th><th>P2P</th><th>Origem</th><th>Status</th></tr></thead><tbody>` +
-      recent.slice(0,12).map(e => `<tr>
+      recent.slice(0,12).map(e => {
+        const hasP2PTraffic = Number(e.p2pDown || 0) > 0 || Number(e.p2pUp || 0) > 0
+        const statusText = hasP2PTraffic ? 'P2P conectado' : (e.active ? 'P2P habilitado, sem peers' : esc(e.reason || 'P2P inativo'))
+        return `<tr>
         <td><b>${esc(e.user || 'sem-login')}</b><div style="color:var(--muted);font-size:11px;">${esc(e.platform || '')}</div></td>
         <td>${esc(e.channel || e.channelId || '--')}</td>
         <td>${fmtTraffic(e.p2pDown)}</td>
         <td>${fmtTraffic(e.httpDown)}</td>
-        <td><span class="badge ${e.active?'bok':'boff'}">${e.active?'P2P ativo':esc(e.reason || 'sem dados')}</span></td>
-      </tr>`).join('') + '</tbody></table>' :
+        <td><span class="badge ${hasP2PTraffic?'bok':e.active?'bwarn':'boff'}">${statusText}</span></td>
+      </tr>`}).join('') + '</tbody></table>' :
       '<div style="padding:18px;color:var(--muted);">Nenhum dado P2P recebido ainda. Abra o web player de teste e toque um canal.</div>'
   }
 

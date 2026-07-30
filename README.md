@@ -7,7 +7,7 @@ consulta em `C:\Users\deivi\Desktop\Versões Anteriores`.
 
 - `app`: Desktop Player Electron com MPV, FFmpeg e fallback pelo gateway.
 - `web-player`: Web Player/PWA com HLS, gateway e integracao SwarmCloud.
-- `android`: aplicativo nativo para Android TV e TV Box, em Kotlin/Compose.
+- `android`: aplicativo Android TV/TV Box oficial, com logo preta/vermelha, pacote `com.izplay.tv`.
 - `panel`: painel administrativo, configuracao e telemetria.
 - `gateway`: proxy, probe e transcode de midia.
 - `deploy`: configuracoes de Nginx, systemd e WireGuard.
@@ -30,7 +30,7 @@ npm run gateway
 # Validar a estrutura
 npm run check
 
-# Gerar APK Android debug
+# Gerar APK Android TV debug (logo preta/vermelha, pacote com.izplay.tv)
 npm run android:debug
 ```
 
@@ -40,3 +40,5 @@ O Desktop Player tambem pode ser aberto por `Abrir Player.bat`.
 
 Toda nova melhoria deve ser feita primeiro nesta pasta `iz-play-v2.1`. As
 pastas arquivadas nao devem voltar a ser usadas como base de desenvolvimento.
+O Android oficial e o pacote `com.izplay.tv`, gerado pela pasta `android/`.
+O pacote Capacitor `com.izplay.player` fica fora do fluxo do TV Box.

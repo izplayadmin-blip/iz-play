@@ -4,7 +4,7 @@
   "description": "IZ Play v2.1 - Painel de Gerenciamento",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node --env-file=.env server.js"
   },
   "dependencies": {
     "express": "^4.18.2"
