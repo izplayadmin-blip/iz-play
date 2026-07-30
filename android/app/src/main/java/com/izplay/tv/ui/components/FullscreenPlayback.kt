@@ -62,16 +62,22 @@ fun FullscreenPlayback(
     onProgress: (positionMs: Long, durationMs: Long) -> Unit = { _, _ -> },
     onClose: () -> Unit
 ) {
-    BackHandler(onBack = onClose)
-
     val surfaceFocus = remember { FocusRequester() }
     val interaction = remember { MutableInteractionSource() }
+    var stopPlayerNow by remember { mutableStateOf<(() -> Unit)?>(null) }
     var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var barVisible by remember { mutableStateOf(true) }
     var positionMs by remember { mutableLongStateOf(initialPositionMs) }
     var durationMs by remember { mutableLongStateOf(0L) }
     var seekToMs by remember { mutableStateOf<Long?>(null) }
     val isLive = subtitle == "AO VIVO"
+
+    fun closePlayback() {
+        stopPlayerNow?.invoke()
+        onClose()
+    }
+
+    BackHandler(onBack = ::closePlayback)
 
     LaunchedEffect(Unit) { runCatching { surfaceFocus.requestFocus() } }
     LaunchedEffect(lastInteraction) {
@@ -116,6 +122,7 @@ fun FullscreenPlayback(
             enableP2p = subtitle == "AO VIVO",
             initialPositionMs = initialPositionMs,
             seekToMs = seekToMs,
+            onStopHandle = { stopPlayerNow = it },
             onProgress = { position, duration ->
                 positionMs = position
                 durationMs = duration

@@ -12,6 +12,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
@@ -42,9 +45,11 @@ fun VideoPlayer(
     initialPositionMs: Long = 0L,
     seekToMs: Long? = null,
     onProgress: (positionMs: Long, durationMs: Long) -> Unit = { _, _ -> },
+    onStopHandle: ((() -> Unit) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val playbackCandidates = remember(streamUrl, fallbackUrl, enableP2p) {
         SwarmCloudManager.playbackCandidates(streamUrl, fallbackUrl, enableP2p)
     }
@@ -67,6 +72,40 @@ fun VideoPlayer(
             )
             .build()
             .apply { playWhenReady = true }
+    }
+    val stopImmediately = remember(exoPlayer) {
+        {
+            exoPlayer.pause()
+            exoPlayer.stop()
+            exoPlayer.clearMediaItems()
+            if (enableP2p) SwarmCloudManager.stopCurrentStream()
+        }
+    }
+
+    DisposableEffect(exoPlayer, onStopHandle) {
+        onStopHandle?.invoke(stopImmediately)
+        onDispose { }
+    }
+
+    DisposableEffect(lifecycleOwner, exoPlayer) {
+        var resumeAfterForeground = false
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    resumeAfterForeground = exoPlayer.isPlaying
+                    exoPlayer.pause()
+                }
+                Lifecycle.Event.ON_START -> {
+                    if (resumeAfterForeground && exoPlayer.mediaItemCount > 0) {
+                        exoPlayer.play()
+                    }
+                    resumeAfterForeground = false
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     DisposableEffect(exoPlayer) {
@@ -130,8 +169,8 @@ fun VideoPlayer(
 
     DisposableEffect(Unit) {
         onDispose {
+            stopImmediately()
             exoPlayer.release()
-            if (enableP2p) SwarmCloudManager.stopCurrentStream()
         }
     }
 
