@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
@@ -12,10 +13,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.dp
 import com.izplay.tv.ui.theme.IzRed
 
@@ -31,22 +37,31 @@ fun TvCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(18.dp), // radius token "card"
-    focusScale: Float = 1.08f,
+    focusScale: Float = 1.05f,
+    focusBorderColor: Color = IzRed,
     content: @Composable BoxScope.(focused: Boolean) -> Unit
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
+    var focused by remember { androidx.compose.runtime.mutableStateOf(false) }
+    val context = LocalContext.current
+    val economical = remember(context) { context.isIzLowMode() }
     val scale by animateFloatAsState(
-        if (focused) focusScale else 1f,
-        animationSpec = tween(150),
+        if (focused && !economical) focusScale else 1f,
+        animationSpec = tween(if (economical) 0 else 140),
         label = "tvCardScale"
     )
 
     Box(
         modifier
+            // `clickable` recebe o foco do D-pad, mas nem todas as versoes de
+            // Android TV publicam FocusInteraction no InteractionSource.
+            // onFocusChanged acompanha o foco real e mantem a borda visivel.
+            .onFocusChanged { focused = it.isFocused }
+            .focusable(interactionSource = interaction)
+            .zIndex(if (focused) 1f else 0f)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(shape)
-            .then(if (focused) Modifier.border(2.dp, IzRed, shape) else Modifier)
+            .then(if (focused) Modifier.border(3.dp, focusBorderColor, shape) else Modifier)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
     ) {
         content(focused)

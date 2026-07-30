@@ -1,12 +1,16 @@
 package com.izplay.tv.data.remote
 
+import android.util.Log
 import android.util.Base64
 import com.izplay.tv.data.model.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import java.net.URLEncoder
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -26,28 +30,86 @@ import java.util.TimeZone
  */
 class XtreamClient(
     private val config: ProviderConfig,
-    private val http: OkHttpClient = OkHttpClient()
+    private val http: OkHttpClient = AppHttpClient.create(),
+    apiBase: String? = null
 ) {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+
+    /** Base dos STREAMS: sempre o host direto do provedor. Regra da ARQUITETURA.md —
+     *  URLs de mídia nunca apontam para rota proxificada de catálogo (dá 403/tela preta
+     *  no transcode); o fallback de reprodução usa /video-gateway/proxy?url=DIRETA. */
     private val base = config.xtreamHost.trimEnd('/')
 
-    private fun api(action: String, extra: String = ""): String =
-        "$base/player_api.php?username=${config.xtreamUser}" +
-                "&password=${config.xtreamPass}&action=$action$extra"
+    /** Base das chamadas de CATÁLOGO (player_api.php): pode ser o gateway central,
+     *  que resolve TV box com a DNS direta bloqueada e aproveita o cache da VPS. */
+    private val catalogBase = (apiBase?.trim()?.trimEnd('/')?.takeIf { it.isNotBlank() }) ?: base
 
-    private suspend fun get(url: String): String = withContext(Dispatchers.IO) {
-        http.newCall(Request.Builder().url(url).build()).execute().use { resp ->
-            if (!resp.isSuccessful) error("HTTP ${resp.code}")
-            resp.body?.string().orEmpty()
+    private fun queryValue(value: String): String =
+        URLEncoder.encode(value, Charsets.UTF_8.name())
+
+    private fun api(action: String, extra: String = ""): String =
+        "$catalogBase/player_api.php?username=${queryValue(config.xtreamUser)}" +
+                "&password=${queryValue(config.xtreamPass)}&action=${queryValue(action)}$extra"
+
+    private fun streamUrl(kind: String, streamId: String, extension: String): String =
+        base.toHttpUrl().newBuilder()
+            .addPathSegment(kind)
+            .addPathSegment(config.xtreamUser)
+            .addPathSegment(config.xtreamPass)
+            .addPathSegment("$streamId.$extension")
+            .build()
+            .toString()
+
+    private fun ratingFrom(vararg objects: JsonObject): String? {
+        val fields = listOf(
+            "rating" to false,
+            "imdb_rating" to false,
+            "tmdb_rating" to false,
+            "rating_10based" to false,
+            "rating_5based" to true
+        )
+        for ((key, fiveBased) in fields) {
+            val raw = objects.firstNotNullOfOrNull { obj ->
+                (obj[key] as? JsonPrimitive)?.content?.trim()
+                    ?.takeIf { it.isNotBlank() && !it.equals("null", true) }
+            } ?: continue
+            val parsed = raw.replace(',', '.').toDoubleOrNull() ?: continue
+            if (parsed <= 0.0) continue
+            val tenBased = if (fiveBased && parsed <= 5.0) parsed * 2.0 else parsed
+            if (tenBased > 10.0) continue
+            return if (tenBased % 1.0 == 0.0) tenBased.toInt().toString()
+            else String.format(Locale.US, "%.1f", tenBased)
+        }
+        return null
+    }
+
+    /**
+     * Rede + parse + mapeamento SEMPRE fora da thread principal: listas IPTV chegam a
+     * dezenas de MB e o parse na main thread congelava a UI em TV boxes fracas.
+     * decodeFromStream evita ainda a cópia intermediária do corpo inteiro em String.
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    private suspend fun getJson(url: String): JsonElement = withContext(Dispatchers.IO) {
+        http.newCall(Request.Builder().url(url).withPlayerHeaders().build()).execute().use { resp ->
+            val safeUrl = url.toHttpUrl()
+            val route = "${safeUrl.scheme}://${safeUrl.host}:${safeUrl.port}${safeUrl.encodedPath}"
+            if (!resp.isSuccessful) {
+                Log.w("IZCatalog", "$route -> HTTP ${resp.code}")
+                error("HTTP ${resp.code}")
+            }
+            val stream = resp.body?.byteStream() ?: error("Resposta vazia")
+            val decoded = json.decodeFromStream<JsonElement>(stream)
+            val size = (decoded as? JsonArray)?.size
+            Log.i("IZCatalog", "$route -> JSON ${size?.let { "$it itens" } ?: "objeto"}")
+            decoded
         }
     }
 
     // ─── Canais ao vivo ────────────────────────────────────────────────────
 
-    suspend fun fetchCategories(): List<Category> {
-        val body = get(api("get_live_categories"))
-        val arr = json.parseToJsonElement(body) as? JsonArray ?: return emptyList()
-        return arr.mapNotNull { el ->
+    suspend fun fetchCategories(): List<Category> = withContext(Dispatchers.Default) {
+        val arr = getJson(api("get_live_categories")) as? JsonArray ?: return@withContext emptyList()
+        arr.mapNotNull { el ->
             val obj = el.jsonObject
             val id = obj["category_id"]?.jsonPrimitive?.content ?: return@mapNotNull null
             val name = obj["category_name"]?.jsonPrimitive?.content ?: return@mapNotNull null
@@ -55,10 +117,9 @@ class XtreamClient(
         }
     }
 
-    suspend fun fetchChannels(): List<Channel> {
-        val body = get(api("get_live_streams"))
-        val arr = json.parseToJsonElement(body) as? JsonArray ?: return emptyList()
-        return arr.mapIndexedNotNull { index, el ->
+    suspend fun fetchChannels(): List<Channel> = withContext(Dispatchers.Default) {
+        val arr = getJson(api("get_live_streams")) as? JsonArray ?: return@withContext emptyList()
+        arr.mapIndexedNotNull { index, el ->
             val obj = el.jsonObject
             val streamId = obj["stream_id"]?.jsonPrimitive?.content ?: return@mapIndexedNotNull null
             val name = obj["name"]?.jsonPrimitive?.content ?: "Canal"
@@ -71,7 +132,7 @@ class XtreamClient(
                 number = num,
                 name = name,
                 logoUrl = logo,
-                streamUrl = "$base/live/${config.xtreamUser}/${config.xtreamPass}/$streamId.m3u8",
+                streamUrl = streamUrl("live", streamId, "m3u8"),
                 categoryId = catId,
                 epgChannelId = epgId
             )
@@ -80,32 +141,37 @@ class XtreamClient(
 
     // ─── EPG (guia de programação) ─────────────────────────────────────────
 
-    suspend fun fetchShortEpg(streamId: String, limit: Int = 12): List<EpgEntry> {
-        val body = get(api("get_short_epg", "&stream_id=$streamId&limit=$limit"))
-        val root = runCatching { json.parseToJsonElement(body).jsonObject }.getOrNull()
-            ?: return emptyList()
-        val listings = root["epg_listings"]?.jsonArray ?: return emptyList()
+    suspend fun fetchShortEpg(streamId: String, limit: Int = 12): List<EpgEntry> = withContext(Dispatchers.Default) {
+        // `get_short_epg` e o formato moderno; boxes/painéis antigos expõem o guia
+        // pelo alias `get_simple_data_table`. Aceita o primeiro que tiver registros.
+        val listings = listOf(
+            "get_short_epg" to "&stream_id=$streamId&limit=$limit",
+            "get_simple_data_table" to "&stream_id=$streamId"
+        ).firstNotNullOfOrNull { (action, extra) ->
+            runCatching {
+                getJson(api(action, extra)).jsonObject["epg_listings"]?.jsonArray
+                    ?.takeIf { it.isNotEmpty() }
+            }.getOrNull()
+        } ?: return@withContext emptyList()
 
         val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }
 
-        return listings.mapNotNull { el ->
+        listings.mapNotNull { el ->
             val obj = el.jsonObject
-            val startRaw = obj["start"]?.jsonPrimitive?.content
-                ?: obj["start_timestamp"]?.jsonPrimitive?.content?.toLongOrNull()
-                    ?.let { return@mapNotNull EpgEntry(
-                        channelId = streamId,
-                        title = decodeb64(obj["title"]?.jsonPrimitive?.content),
-                        description = decodeb64(obj["description"]?.jsonPrimitive?.content),
-                        start = it * 1000L,
-                        end = (obj["stop_timestamp"]?.jsonPrimitive?.content?.toLongOrNull() ?: it) * 1000L
-                    )}
+            // Paineis Xtream variam entre timestamps e datas textuais. Os timestamps
+            // sao preferidos porque nao sofrem com timezone configurado incorretamente.
+            val startTs = obj["start_timestamp"]?.jsonPrimitive?.content?.toLongOrNull()
+            val endTs = (obj["stop_timestamp"] ?: obj["end_timestamp"])
+                ?.jsonPrimitive?.content?.toLongOrNull()
+            val start = startTs?.times(1000L) ?: obj["start"]?.jsonPrimitive?.content
+                ?.let { runCatching { fmt.parse(it)?.time }.getOrNull() }
                 ?: return@mapNotNull null
-            val endRaw = obj["end"]?.jsonPrimitive?.content ?: return@mapNotNull null
-
-            val start = runCatching { fmt.parse(startRaw)?.time }.getOrNull() ?: return@mapNotNull null
-            val end = runCatching { fmt.parse(endRaw)?.time }.getOrNull() ?: return@mapNotNull null
+            val end = endTs?.times(1000L)
+                ?: (obj["end"] ?: obj["stop"])?.jsonPrimitive?.content
+                    ?.let { runCatching { fmt.parse(it)?.time }.getOrNull() }
+                ?: start
 
             EpgEntry(
                 channelId = streamId,
@@ -126,10 +192,9 @@ class XtreamClient(
 
     // ─── VOD (filmes) ──────────────────────────────────────────────────────
 
-    suspend fun fetchVodCategories(): List<Category> {
-        val body = get(api("get_vod_categories"))
-        val arr = json.parseToJsonElement(body) as? JsonArray ?: return emptyList()
-        return arr.mapNotNull { el ->
+    suspend fun fetchVodCategories(): List<Category> = withContext(Dispatchers.Default) {
+        val arr = getJson(api("get_vod_categories")) as? JsonArray ?: return@withContext emptyList()
+        arr.mapNotNull { el ->
             val obj = el.jsonObject
             val id = obj["category_id"]?.jsonPrimitive?.content ?: return@mapNotNull null
             val name = obj["category_name"]?.jsonPrimitive?.content ?: return@mapNotNull null
@@ -137,40 +202,105 @@ class XtreamClient(
         }
     }
 
-    suspend fun fetchVodStreams(): List<VodItem> {
-        val body = get(api("get_vod_streams"))
-        val arr = json.parseToJsonElement(body) as? JsonArray ?: return emptyList()
-        return arr.mapNotNull { el ->
+    suspend fun fetchVodStreams(): List<VodItem> = withContext(Dispatchers.Default) {
+        val arr = getJson(api("get_vod_streams")) as? JsonArray ?: return@withContext emptyList()
+        arr.mapNotNull { el ->
             val obj = el.jsonObject
             val streamId = obj["stream_id"]?.jsonPrimitive?.content ?: return@mapNotNull null
             val name = obj["name"]?.jsonPrimitive?.content ?: "Filme"
             val poster = obj["stream_icon"]?.jsonPrimitive?.content?.ifBlank { null }
             val catId = obj["category_id"]?.jsonPrimitive?.content ?: ""
-            val rating = obj["rating"]?.jsonPrimitive?.content?.ifBlank { null }
+            val rating = ratingFrom(obj)
             val plot = obj["plot"]?.jsonPrimitive?.content?.ifBlank { null }
             val year = obj["year"]?.jsonPrimitive?.content?.ifBlank { null }
             val dur = obj["duration_secs"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+            val addedAt = obj["added"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
+            val backdrop = (obj["backdrop_path"] as? JsonArray)
+                ?.firstOrNull()?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
+                ?: obj["backdrop"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }
             val ext = obj["container_extension"]?.jsonPrimitive?.content ?: "mp4"
             VodItem(
                 id = streamId,
                 name = name,
                 posterUrl = poster,
-                streamUrl = "$base/movie/${config.xtreamUser}/${config.xtreamPass}/$streamId.$ext",
+                streamUrl = streamUrl("movie", streamId, ext),
                 categoryId = catId,
                 rating = rating,
                 plot = plot,
                 year = year,
-                durationSecs = dur
+                durationSecs = dur,
+                addedAt = addedAt,
+                backdropUrl = backdrop
             )
         }
     }
 
+    /** A listagem VOD costuma omitir sinopse/duracao. O detalhe e carregado somente
+     *  ao abrir o filme para nao disparar milhares de requisicoes no catalogo. */
+    suspend fun fetchVodInfo(vod: VodItem): VodItem = withContext(Dispatchers.Default) {
+        val root = runCatching {
+            getJson(api("get_vod_info", "&vod_id=${vod.id}")).jsonObject
+        }.getOrNull() ?: return@withContext vod
+        val info = root["info"] as? JsonObject ?: JsonObject(emptyMap())
+        val movie = root["movie_data"] as? JsonObject ?: JsonObject(emptyMap())
+
+        fun value(vararg keys: String): String? = keys.firstNotNullOfOrNull { key ->
+            (info[key] ?: movie[key] ?: root[key])
+                ?.let { it as? JsonPrimitive }
+                ?.content
+                ?.trim()
+                ?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+        }
+        fun durationSeconds(): Int {
+            value("duration_secs", "duration_seconds")?.toIntOrNull()?.let { return it }
+            val parts = value("duration")?.split(':')?.mapNotNull(String::toIntOrNull) ?: return 0
+            return when (parts.size) {
+                3 -> parts[0] * 3600 + parts[1] * 60 + parts[2]
+                2 -> parts[0] * 60 + parts[1]
+                else -> 0
+            }
+        }
+        fun imageValue(vararg keys: String): String? {
+            keys.forEach { key ->
+                val raw = info[key] ?: movie[key] ?: root[key]
+                val candidate = when (raw) {
+                    is JsonArray -> raw.firstOrNull()?.jsonPrimitive?.content
+                    is JsonPrimitive -> raw.content
+                    else -> null
+                }?.trim()?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+                if (candidate != null) return candidate
+            }
+            return null
+        }
+        fun floatValue(default: Float, vararg keys: String): Float =
+            value(*keys)?.toFloatOrNull() ?: default
+
+        vod.copy(
+            plot = value("plot", "description", "overview") ?: vod.plot,
+            rating = ratingFrom(info, movie, root) ?: vod.rating?.takeUnless { it.toDoubleOrNull() == 0.0 },
+            year = value("year", "releasedate", "release_date")?.take(4) ?: vod.year,
+            durationSecs = durationSeconds().takeIf { it > 0 } ?: vod.durationSecs,
+            posterUrl = imageValue("movie_image", "cover_big", "stream_icon") ?: vod.posterUrl,
+            backdropUrl = imageValue("backdropUrl", "backdrop_url", "backdrop_path", "backdrop")
+                ?: vod.backdropUrl,
+            backdropMobileUrl = imageValue("backdropMobileUrl", "backdrop_mobile_url", "backdrop_mobile")
+                ?: vod.backdropMobileUrl,
+            backdropPositionX = floatValue(vod.backdropPositionX, "backdropPositionX", "backdrop_position_x")
+                .coerceIn(0f, 100f),
+            backdropPositionY = floatValue(vod.backdropPositionY, "backdropPositionY", "backdrop_position_y")
+                .coerceIn(0f, 100f),
+            backdropScale = floatValue(vod.backdropScale, "backdropScale", "backdrop_scale")
+                .coerceIn(1f, 1.3f),
+            overlayOpacity = floatValue(vod.overlayOpacity, "overlayOpacity", "overlay_opacity")
+                .coerceIn(0f, 1f)
+        )
+    }
+
     // ─── Séries ────────────────────────────────────────────────────────────
 
-    suspend fun fetchSeriesCategories(): List<Category> {
-        val body = get(api("get_series_categories"))
-        val arr = json.parseToJsonElement(body) as? JsonArray ?: return emptyList()
-        return arr.mapNotNull { el ->
+    suspend fun fetchSeriesCategories(): List<Category> = withContext(Dispatchers.Default) {
+        val arr = getJson(api("get_series_categories")) as? JsonArray ?: return@withContext emptyList()
+        arr.mapNotNull { el ->
             val obj = el.jsonObject
             val id = obj["category_id"]?.jsonPrimitive?.content ?: return@mapNotNull null
             val name = obj["category_name"]?.jsonPrimitive?.content ?: return@mapNotNull null
@@ -178,16 +308,15 @@ class XtreamClient(
         }
     }
 
-    suspend fun fetchSeries(): List<SeriesItem> {
-        val body = get(api("get_series"))
-        val arr = json.parseToJsonElement(body) as? JsonArray ?: return emptyList()
-        return arr.mapNotNull { el ->
+    suspend fun fetchSeries(): List<SeriesItem> = withContext(Dispatchers.Default) {
+        val arr = getJson(api("get_series")) as? JsonArray ?: return@withContext emptyList()
+        arr.mapNotNull { el ->
             val obj = el.jsonObject
             val id = obj["series_id"]?.jsonPrimitive?.content ?: return@mapNotNull null
             val name = obj["name"]?.jsonPrimitive?.content ?: "Série"
             val cover = obj["cover"]?.jsonPrimitive?.content?.ifBlank { null }
             val catId = obj["category_id"]?.jsonPrimitive?.content ?: ""
-            val rating = obj["rating"]?.jsonPrimitive?.content?.ifBlank { null }
+            val rating = ratingFrom(obj)
             val plot = obj["plot"]?.jsonPrimitive?.content?.ifBlank { null }
             val year = obj["year"]?.jsonPrimitive?.content?.ifBlank { null }
             SeriesItem(
@@ -202,13 +331,24 @@ class XtreamClient(
         }
     }
 
-    suspend fun fetchSeriesInfo(seriesId: String): List<Season> {
-        val body = get(api("get_series_info", "&series_id=$seriesId"))
-        val root = runCatching { json.parseToJsonElement(body).jsonObject }.getOrNull()
-            ?: return emptyList()
-        val episodesMap = root["episodes"]?.jsonObject ?: return emptyList()
+    suspend fun fetchSeriesInfo(series: SeriesItem): SeriesDetail = withContext(Dispatchers.Default) {
+        val root = runCatching { getJson(api("get_series_info", "&series_id=${series.id}")).jsonObject }.getOrNull()
+            ?: return@withContext SeriesDetail(series, emptyList())
+        val info = root["info"] as? JsonObject ?: JsonObject(emptyMap())
+        fun detail(vararg keys: String): String? = keys.firstNotNullOfOrNull { key ->
+            (info[key] ?: root[key])?.let { it as? JsonPrimitive }?.content?.trim()
+                ?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+        }
+        val detailedSeries = series.copy(
+            plot = detail("plot", "description", "overview") ?: series.plot,
+            rating = ratingFrom(info, root) ?: series.rating?.takeUnless { it.toDoubleOrNull() == 0.0 },
+            year = detail("year", "releaseDate", "releasedate")?.take(4) ?: series.year,
+            coverUrl = detail("cover_big", "cover", "movie_image") ?: series.coverUrl
+        )
+        val episodesMap = root["episodes"]?.jsonObject
+            ?: return@withContext SeriesDetail(detailedSeries, emptyList())
 
-        return episodesMap.entries.mapNotNull { (seasonKey, seasonArr) ->
+        val seasons = episodesMap.entries.mapNotNull { (seasonKey, seasonArr) ->
             val seasonNum = seasonKey.toIntOrNull() ?: return@mapNotNull null
             val eps = seasonArr.jsonArray.mapNotNull { el ->
                 val obj = el.jsonObject
@@ -223,7 +363,7 @@ class XtreamClient(
                     id = epId,
                     title = title,
                     episodeNum = epNum,
-                    streamUrl = "$base/series/${config.xtreamUser}/${config.xtreamPass}/$epId.$ext",
+                    streamUrl = streamUrl("series", epId, ext),
                     durationSecs = dur,
                     plot = plot,
                     stillUrl = still
@@ -231,5 +371,6 @@ class XtreamClient(
             }.sortedBy { it.episodeNum }
             Season(seasonNum, eps)
         }.sortedBy { it.seasonNumber }
+        SeriesDetail(detailedSeries, seasons)
     }
 }

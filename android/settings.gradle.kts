@@ -10,6 +10,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url = uri("https://maven.swarmcloud.net/repository/maven-releases/")
+        }
     }
 }
 rootProject.name = "IZPlay"

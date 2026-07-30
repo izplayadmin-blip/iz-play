@@ -1,57 +1,120 @@
 package com.izplay.tv.data.remote
 
+import com.izplay.tv.data.model.ClientConfig
+import com.izplay.tv.data.model.SwarmCloudInfo
+import com.izplay.tv.data.model.VpnServerInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.util.concurrent.TimeUnit
 
 /**
- * Config remota vinda do Painel Admin (mesma fonte do web/desktop).
- * Fornece a(s) DNS/host do provedor que o admin gerencia centralmente.
- * Assim o login do app fica só usuário/senha e a troca de servidor é feita no painel.
+ * Config central vinda do Painel Admin (mesma fonte do web/desktop):
+ * DNS do provedor, Proxy/Gateway, P2P/SwarmCloud, Super Peer e VPN WireGuard.
+ * O admin muda no painel e todos os clientes seguem, sem atualizar o app.
  *
- * Lê os campos `defaultDns` (host principal) e `dnsServers` (lista) do
- * `GET /api/client/config`. Se o painel não responder, cai nos fallbacks.
+ * Parse defensivo: aceita `swarmCloud` aninhado (formato atual do painel) e o
+ * formato plano antigo (`swarmCloudEnabled`/`swarmCloudKey`...). Se o painel
+ * não responder, o chamador usa cache local e por fim os fallbacks fixos.
  */
 class RemoteConfigClient(
     private val configUrl: String = DEFAULT_URL,
-    private val http: OkHttpClient = OkHttpClient()
+    private val http: OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(6, TimeUnit.SECONDS)
+        .readTimeout(6, TimeUnit.SECONDS)
+        .callTimeout(10, TimeUnit.SECONDS)
+        .build()
 ) {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
-    /** Retorna a lista de hosts (primeiro = principal). Vazia se não conseguir. */
-    suspend fun fetchHosts(): List<String> = withContext(Dispatchers.IO) {
+    /** Config completa; null se o painel não responder ou o corpo for inválido. */
+    suspend fun fetchConfig(): ClientConfig? = withContext(Dispatchers.IO) {
         runCatching {
             val body = http.newCall(Request.Builder().url(configUrl).build()).execute().use { resp ->
                 if (!resp.isSuccessful) error("HTTP ${resp.code}")
                 resp.body?.string().orEmpty()
             }
-            val root = json.parseToJsonElement(body) as? JsonObject ?: return@runCatching emptyList()
-            val hosts = mutableListOf<String>()
-            (root["dnsServers"] as? JsonArray)?.forEach { el ->
-                (el as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }?.let { hosts.add(normalize(it)) }
-            }
-            (root["defaultDns"] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
-                ?.let { hosts.add(0, normalize(it)) }
-            hosts.distinct()
-        }.getOrDefault(emptyList())
+            parseConfig(json.parseToJsonElement(body).jsonObject)
+        }.getOrNull()
     }
 
-    private fun normalize(host: String): String {
-        var s = host.trim().trimEnd('/')
-        if (!s.startsWith("http", ignoreCase = true)) s = "http://$s"
-        return s
+    /** Compatibilidade: só a lista de hosts do provedor (primeiro = principal). */
+    suspend fun fetchHosts(): List<String> = fetchConfig()?.providerHosts ?: emptyList()
+
+    private fun parseConfig(root: JsonObject): ClientConfig {
+        fun str(key: String): String =
+            (root[key] as? JsonPrimitive)?.content?.trim().orEmpty()
+
+        val dnsServers = (root["dnsServers"] as? JsonArray)
+            ?.mapNotNull { (it as? JsonPrimitive)?.content?.trim()?.takeIf(String::isNotBlank) }
+            ?: emptyList()
+
+        val swarmObj = root["swarmCloud"] as? JsonObject
+        val swarm = if (swarmObj != null) {
+            SwarmCloudInfo(
+                enabled = (swarmObj["enabled"] as? JsonPrimitive)?.content?.toBoolean() ?: false,
+                token = (swarmObj["token"] as? JsonPrimitive)?.content?.trim().orEmpty(),
+                appId = (swarmObj["appId"] as? JsonPrimitive)?.content?.trim().orEmpty(),
+                superPeerUrl = (swarmObj["superPeerUrl"] as? JsonPrimitive)?.content?.trim().orEmpty()
+            )
+        } else {
+            // formato plano legado do painel
+            SwarmCloudInfo(
+                enabled = str("swarmCloudEnabled").toBoolean(),
+                token = str("swarmCloudKey"),
+                appId = str("swarmCloudAppId"),
+                superPeerUrl = str("superPeerUrl")
+            )
+        }
+
+        val vpns = (root["vpnServers"] as? JsonArray)?.mapNotNull { el ->
+            val obj = (el as? JsonObject) ?: return@mapNotNull null
+            fun v(key: String) = (obj[key] as? JsonPrimitive)?.content?.trim().orEmpty()
+            VpnServerInfo(
+                id = v("id"), name = v("name"), country = v("country"),
+                url = v("url"), endpoint = v("endpoint"), subnet = v("subnet")
+            ).takeIf { it.id.isNotBlank() || it.url.isNotBlank() }
+        } ?: emptyList()
+
+        return ClientConfig(
+            defaultDns = str("defaultDns"),
+            dnsServers = dnsServers,
+            proxyUrl = str("proxyUrl"),
+            telemetryUrl = str("telemetryUrl"),
+            gatewayUrl = str("gatewayUrl"),
+            videoGatewayUrl = str("videoGatewayUrl"),
+            protectedGatewayUrl = str("protectedGatewayUrl"),
+            webPlayerUrl = str("webPlayerUrl"),
+            swarmCloud = swarm,
+            vpnServers = vpns
+        )
     }
 
     companion object {
         /** Painel Admin — mesma origem de config do web/desktop. */
-        const val DEFAULT_URL = "https://admin.izplay.tv/api/client/config"
+        const val DEFAULT_URL = "http://admin.izplay.tv/api/client/config"
 
-        /** Fallbacks se o painel não responder (as duas DNS em uso hoje; cxst como principal). */
-        val FALLBACK_HOSTS = listOf("http://cxst.shop", "http://sopvrt.shop")
+        /**
+         * DNS do provedor com rotação: se uma cair (bloqueio/404), a cascata tenta
+         * a próxima automaticamente. O ideal é o painel controlar isso via
+         * defaultDns/dnsServers; esta lista é a rede de segurança local quando o
+         * painel não responde. Ordem = ordem fornecida pelo operador.
+         */
+        val FALLBACK_HOSTS: List<String> = emptyList()
+
+        /** Fallback seguro da config quando painel e cache falham (só URLs públicas). */
+        val FALLBACK_CONFIG = ClientConfig(
+            gatewayUrl = "/gateway",
+            telemetryUrl = "http://admin.izplay.tv/api",
+            videoGatewayUrl = "/video-gateway",
+            webPlayerUrl = "https://web.izplay.tv/"
+        )
     }
 }

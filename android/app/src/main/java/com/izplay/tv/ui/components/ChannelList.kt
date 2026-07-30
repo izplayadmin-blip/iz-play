@@ -2,30 +2,36 @@ package com.izplay.tv.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
+import coil.imageLoader
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import com.izplay.tv.data.model.Category
 import com.izplay.tv.data.model.Channel
 import com.izplay.tv.ui.theme.*
@@ -51,23 +57,34 @@ fun CategoryColumn(
         ) {
             Text("Categorias", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Spacer(Modifier.weight(1f))
+            val closeFocus = rememberTvFocus()
             Box(
                 Modifier
                     .size(36.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .clickable(onClick = onClose),
+                    .background(if (closeFocus.focused) IzRed else Color.Transparent)
+                    .clickable(interactionSource = closeFocus.source, indication = null, onClick = onClose),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.Close, "Fechar", tint = TextSecondary, modifier = Modifier.size(22.dp))
+                Icon(
+                    Icons.Filled.Close, "Fechar",
+                    tint = if (closeFocus.focused) Color.White else TextSecondary,
+                    modifier = Modifier.size(22.dp)
+                )
             }
         }
-        LazyColumn(Modifier.fillMaxSize()) {
+        // Ao abrir o drawer, o foco do D-pad PRECISA entrar aqui — sem isso as setas
+        // continuavam navegando o conteúdo atrás e a categoria nunca mudava.
+        val firstFocus = remember { FocusRequester() }
+        LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
+        LazyColumn(Modifier.fillMaxSize().focusGroup()) {
             item {
                 CategoryRow(
                     name = "FAVORITOS",
                     count = favoritesCount,
                     active = selectedId == "__favorites__",
-                    onClick = { onSelect("__favorites__") }
+                    onClick = { onSelect("__favorites__") },
+                    modifier = Modifier.focusRequester(firstFocus)
                 )
             }
             items(categories) { cat ->
@@ -83,10 +100,16 @@ fun CategoryColumn(
 }
 
 @Composable
-private fun CategoryRow(name: String, count: Int, active: Boolean, onClick: () -> Unit) {
+private fun CategoryRow(
+    name: String,
+    count: Int,
+    active: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val f = rememberTvFocus()
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .background(
                 when {
@@ -128,19 +151,42 @@ fun ChannelColumn(
     onSearch: (String) -> Unit,
     onOpenCategories: () -> Unit,
     onSelect: (Channel) -> Unit,
+    showSearch: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    LaunchedEffect(channels) {
+        channels.asSequence()
+            .mapNotNull { it.logoUrl?.takeIf(String::isNotBlank) }
+            .distinct()
+            .take(24)
+            .forEach { logoUrl ->
+                context.imageLoader.enqueue(
+                    ImageRequest.Builder(context)
+                        .data(logoUrl)
+                        .memoryCacheKey(channelLogoCacheKey(logoUrl))
+                        .diskCacheKey(channelLogoCacheKey(logoUrl))
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .networkCachePolicy(CachePolicy.ENABLED)
+                        .size(96, 96)
+                        .build()
+                )
+            }
+    }
     Column(
         modifier
             .fillMaxHeight()
             .width(330.dp)
             .background(PanelDarker)
     ) {
-        // Cabeçalho: botão que abre o drawer de categorias
+        // Cabeçalho: botão que abre o drawer de categorias (com destaque de foco)
+        val headerFocus = rememberTvFocus()
         Row(
             Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onOpenCategories)
+                .background(if (headerFocus.focused) IzRed.copy(alpha = 0.26f) else Color.Transparent)
+                .clickable(interactionSource = headerFocus.source, indication = null, onClick = onOpenCategories)
                 .padding(horizontal = 14.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -152,36 +198,17 @@ fun ChannelColumn(
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        // Busca compacta
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp)
-                .padding(bottom = 10.dp)
-                .height(40.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(PanelDark)
-                .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Filled.Search, null, tint = TextSecondary, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(10.dp))
-            Box(Modifier.weight(1f)) {
-                if (searchQuery.isEmpty()) {
-                    Text("Buscar canal...", color = TextSecondary, fontSize = 13.sp)
-                }
-                BasicTextField(
-                    value = searchQuery,
-                    onValueChange = onSearch,
-                    singleLine = true,
-                    textStyle = TextStyle(color = TextPrimary, fontSize = 13.sp),
-                    cursorBrush = SolidColor(IzRed),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+        // Busca no padrão TV: só abre o teclado ao apertar OK (TvSearchField)
+        if (showSearch) {
+            TvSearchField(
+                query = searchQuery,
+                placeholder = "Buscar canal...",
+                onQuery = onSearch,
+                modifier = Modifier.padding(horizontal = 14.dp).padding(bottom = 10.dp)
+            )
         }
         LazyColumn(Modifier.weight(1f)) {
-            items(channels) { ch ->
+            items(channels, key = { it.id }) { ch ->
                 ChannelRow(ch, ch.id == selectedChannelId) { onSelect(ch) }
             }
         }
@@ -198,6 +225,7 @@ fun ChannelColumn(
 @Composable
 private fun ChannelRow(channel: Channel, active: Boolean, onClick: () -> Unit) {
     val f = rememberTvFocus()
+    val context = LocalContext.current
     Row(
         Modifier
             .fillMaxWidth()
@@ -230,14 +258,25 @@ private fun ChannelRow(channel: Channel, active: Boolean, onClick: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             if (channel.logoUrl != null) {
-                AsyncImage(
-                    model = channel.logoUrl,
+                SubcomposeAsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(channel.logoUrl)
+                        .memoryCacheKey(channelLogoCacheKey(channel.logoUrl))
+                        .diskCacheKey(channelLogoCacheKey(channel.logoUrl))
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .networkCachePolicy(CachePolicy.ENABLED)
+                        .size(96, 96)
+                        .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(36.dp),
+                    loading = { ChannelInitials(channel.name) },
+                    error = { ChannelInitials(channel.name) },
+                    success = { SubcomposeAsyncImageContent() }
                 )
             } else {
-                Text(channel.name.take(2).uppercase(), color = TextPrimary, fontSize = 12.sp)
+                ChannelInitials(channel.name)
             }
         }
         Spacer(Modifier.width(14.dp))
@@ -250,4 +289,17 @@ private fun ChannelRow(channel: Channel, active: Boolean, onClick: () -> Unit) {
             overflow = TextOverflow.Ellipsis
         )
     }
+}
+
+private fun channelLogoCacheKey(url: String): String =
+    "channel-logo:${url.trim().lowercase().hashCode()}"
+
+@Composable
+private fun ChannelInitials(name: String) {
+    Text(
+        name.split(' ').filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1) }.uppercase().ifBlank { "TV" },
+        color = TextSecondary,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Black
+    )
 }

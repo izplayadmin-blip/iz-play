@@ -1,9 +1,19 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization") version "2.0.20"
 }
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use(::load)
+}
+val swarmCloudToken = localProperties.getProperty("SWARMCLOUD_TOKEN", "")
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
 
 android {
     namespace = "com.izplay.tv"
@@ -13,18 +23,26 @@ android {
         applicationId = "com.izplay.tv"
         minSdk = 24
         targetSdk = 34
-        versionCode = 24
-        versionName = "2.1.3"
+        versionCode = 66
+        versionName = "2.1.45"
         vectorDrawables { useSupportLibrary = true }
+        buildConfigField("String", "SWARMCLOUD_TOKEN", "\"$swarmCloudToken\"")
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8 ligado: em TV box fraca o APK sem otimização do ART/R8 fica
+            // visivelmente mais lento (Compose em especial).
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Assina com a chave de debug: mesma assinatura dos APKs já instalados
+            // nas boxes (fluxo assembleDebug + adb install), então atualiza por cima.
+            // Trocar por keystore próprio quando houver assinatura oficial.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -32,7 +50,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 }
 
 dependencies {
@@ -58,7 +79,14 @@ dependencies {
 
     // Networking
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp-dnsoverhttps:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // SwarmCloud P2P — used only for full-screen HLS live channels.
+    implementation("com.swarmcloud:datachannel_native:latest.release")
+    implementation("com.swarmcloud:p2p_engine:latest.release")
+    implementation("com.orhanobut:logger:2.2.0")
+    implementation("com.google.code.gson:gson:2.9.0")
 
     // JSON (Xtream API)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")

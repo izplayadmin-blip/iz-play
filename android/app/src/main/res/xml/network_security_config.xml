@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Preserve existing compatibility with cleartext Xtream providers. -->
+    <base-config cleartextTrafficPermitted="true" />
+    <!-- SwarmCloud serves the parsed HLS manifest through loopback. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

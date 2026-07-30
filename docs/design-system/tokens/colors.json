@@ -1,0 +1,17 @@
+{
+  "primary": "#CC0000",
+  "primaryHover": "#E60000",
+  "primarySoft": "#FF3333",
+  "background": "#000000",
+  "backgroundDeep": "#05070B",
+  "surface": "#111111",
+  "surface2": "#181818",
+  "surfaceHover": "#1B1B1B",
+  "border": "#2A2A2A",
+  "textPrimary": "#FFFFFF",
+  "textSecondary": "#A8A8A8",
+  "muted": "#888888",
+  "success": "#2ECC71",
+  "warning": "#F39C12",
+  "error": "#E74C3C"
+}

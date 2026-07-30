@@ -1,4 +1,5 @@
 node_modules/
+**/.idea/
 .claude/settings.local.json
 .env
 .env.*
@@ -17,6 +18,9 @@ app/ffmpeg-master-latest-win64-gpl-shared/
 *.tar.gz
 *.apk
 *.aab
+/*.png
+/web-player/*.png
+/window.xml
 *.exe
 *.dll
 *.lib

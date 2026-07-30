@@ -1,4 +1,4 @@
-package com.izplay.tv.ui.components
+﻿package com.izplay.tv.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,6 +16,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,6 +28,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.izplay.tv.data.model.Channel
 import com.izplay.tv.data.model.EpgEntry
 import com.izplay.tv.player.VideoPlayer
@@ -38,11 +43,14 @@ fun PlayerPanel(
     isFavorite: Boolean,
     epg: List<EpgEntry>,
     epgLoading: Boolean = false,
+    suspended: Boolean = false,
+    streamFallback: String? = null,
     onToggleFavorite: () -> Unit,
     onReconnect: () -> Unit,
     onFullscreen: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showInfo by remember(channel?.id) { mutableStateOf(false) }
     Column(
         modifier
             .fillMaxSize()
@@ -56,7 +64,19 @@ fun PlayerPanel(
                 .clip(RoundedCornerShape(14.dp))
                 .background(Color.Black)
         ) {
-            VideoPlayer(streamUrl = channel?.streamUrl, modifier = Modifier.fillMaxSize())
+            if (suspended) {
+                // Em tela cheia o player do painel é REMOVIDO da composição (não só
+                // pausado): o SurfaceView dele mantinha o último frame por cima do
+                // fullscreen, e TV boxes costumam ter um único decodificador de
+                // hardware — precisa ser liberado para a tela cheia usar.
+                Box(Modifier.fillMaxSize().background(Color.Black))
+            } else {
+                VideoPlayer(
+                    streamUrl = channel?.streamUrl,
+                    fallbackUrl = streamFallback,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
 
         Spacer(Modifier.height(14.dp))
@@ -75,24 +95,55 @@ fun PlayerPanel(
             ActionButton(if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder, "FAVORITO", Modifier.weight(1f), onToggleFavorite)
             ActionButton(Icons.Filled.Refresh, "RECONECTAR", Modifier.weight(1f), onReconnect)
             ActionButton(Icons.Filled.Fullscreen, "TELA CHEIA", Modifier.weight(1f), onFullscreen)
-            ActionButton(Icons.Filled.Info, "INFORMAÇÕES", Modifier.weight(1f)) {}
+            ActionButton(Icons.Filled.Info, "INFO", Modifier.weight(1f)) { if (channel != null) showInfo = true }
         }
 
         Spacer(Modifier.height(16.dp))
 
-        Text("PROGRAMAÇÃO", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Black)
+        Text("PROGRAMACAO", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Black)
         Spacer(Modifier.height(8.dp))
         Box(Modifier.fillMaxSize()) {
             when {
                 epgLoading -> CircularProgressIndicator(color = IzRed, modifier = Modifier.size(24.dp).align(Alignment.TopStart).padding(top = 4.dp))
                 epg.isEmpty() -> Text(
-                    "Sem informações de programação",
+                    "Sem informacoes de programacao",
                     color = TextSecondary,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(top = 8.dp)
                 )
                 else -> LazyColumn(Modifier.fillMaxSize()) {
                     items(epg) { entry -> EpgRow(entry) }
+                }
+            }
+        }
+    }
+    if (showInfo && channel != null) {
+        val now = System.currentTimeMillis()
+        val current = epg.firstOrNull { now in it.start..it.end }
+        val next = epg.firstOrNull { it.start > now }
+        Dialog(onDismissRequest = { showInfo = false }) {
+            Column(
+                Modifier.width(560.dp).clip(RoundedCornerShape(18.dp)).background(PanelElevated).padding(24.dp)
+            ) {
+                Text("INFORMACOES DO CANAL", color = IzRed, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.height(10.dp))
+                Text(channel.name, color = TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.height(14.dp))
+                Text("Canal ${channel.number}  •  ID ${channel.id}", color = TextSecondary, fontSize = 13.sp)
+                Spacer(Modifier.height(18.dp))
+                Text("AGORA", color = IzRed, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                Text(current?.title ?: "Programacao nao fornecida", color = TextPrimary, fontSize = 15.sp)
+                current?.description?.takeIf { it.isNotBlank() }?.let {
+                    Spacer(Modifier.height(6.dp)); Text(it, color = TextSecondary, fontSize = 13.sp, maxLines = 4)
+                }
+                Spacer(Modifier.height(14.dp))
+                Text("A SEGUIR", color = IzRed, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                Text(next?.title ?: "Sem proxima programacao", color = TextPrimary, fontSize = 14.sp)
+                Spacer(Modifier.height(22.dp))
+                TvCard(onClick = { showInfo = false }, shape = RoundedCornerShape(10.dp), focusScale = 1.03f) {
+                    Box(Modifier.fillMaxWidth().height(48.dp).background(IzRed), contentAlignment = Alignment.Center) {
+                        Text("VOLTAR", color = Color.White, fontWeight = FontWeight.Black)
+                    }
                 }
             }
         }
@@ -128,17 +179,20 @@ private fun EpgRow(entry: EpgEntry) {
 
 @Composable
 private fun ActionButton(icon: ImageVector, label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Column(
-        modifier
-            .height(64.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(PanelElevated)
-            .clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(icon, null, tint = TextPrimary, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.height(5.dp))
-        Text(label, color = TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Black)
+    // Foco oficial (borda vermelha + zoom) via TvCard — antes o D-pad chegava
+    // nos botões mas não dava pra ver qual estava selecionado.
+    TvCard(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(12.dp), focusScale = 1.03f) { focused ->
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .background(if (focused) IzRed.copy(alpha = 0.32f) else PanelElevated),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, null, tint = TextPrimary, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.height(5.dp))
+            Text(label, color = TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Black)
+        }
     }
 }
