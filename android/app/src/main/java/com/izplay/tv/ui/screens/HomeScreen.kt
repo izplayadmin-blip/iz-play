@@ -54,6 +54,8 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.izplay.tv.data.model.Channel
+import com.izplay.tv.data.model.SeriesItem
+import com.izplay.tv.data.model.VodItem
 import com.izplay.tv.player.VideoPlayer
 import com.izplay.tv.ui.MainViewModel
 import com.izplay.tv.ui.UiState
@@ -518,20 +520,34 @@ private fun StartDashboard(
         state.seriesCategories.associate { it.id to it.name }
     }
     val personalizedMovies = remember(state.allVod, tastes, vodCategoryNames) {
-        val preferred = state.allVod.asSequence().filter {
-            preferenceScore(vodCategoryNames[it.categoryId].orEmpty(), tastes) > 0
-        }.take(80).toList()
-        if (preferred.size >= 80) preferred else preferred + state.allVod.asSequence().filter {
-            preferenceScore(vodCategoryNames[it.categoryId].orEmpty(), tastes) == 0
-        }.take(80 - preferred.size).toList()
+        state.allVod.asSequence()
+            .filter {
+                preferenceScore(vodCategoryNames[it.categoryId].orEmpty(), tastes) > 0 &&
+                    !it.posterUrl.isNullOrBlank() &&
+                    recommendationRating(it.rating) >= 6.5
+            }
+            .sortedWith(
+                compareByDescending<VodItem> {
+                    preferenceScore(vodCategoryNames[it.categoryId].orEmpty(), tastes)
+                }.thenByDescending { recommendationRating(it.rating) }
+            )
+            .take(80)
+            .toList()
     }
     val personalizedSeries = remember(state.allSeries, tastes, seriesCategoryNames) {
-        val preferred = state.allSeries.asSequence().filter {
-            preferenceScore(seriesCategoryNames[it.categoryId].orEmpty(), tastes) > 0
-        }.take(80).toList()
-        if (preferred.size >= 80) preferred else preferred + state.allSeries.asSequence().filter {
-            preferenceScore(seriesCategoryNames[it.categoryId].orEmpty(), tastes) == 0
-        }.take(80 - preferred.size).toList()
+        state.allSeries.asSequence()
+            .filter {
+                preferenceScore(seriesCategoryNames[it.categoryId].orEmpty(), tastes) > 0 &&
+                    !it.coverUrl.isNullOrBlank() &&
+                    recommendationRating(it.rating) >= 6.5
+            }
+            .sortedWith(
+                compareByDescending<SeriesItem> {
+                    preferenceScore(seriesCategoryNames[it.categoryId].orEmpty(), tastes)
+                }.thenByDescending { recommendationRating(it.rating) }
+            )
+            .take(80)
+            .toList()
     }
     // O destaque é editorial e igual para todos: o último filme adicionado
     // pelo fornecedor. A personalização fica somente nas fileiras abaixo.
@@ -1165,6 +1181,14 @@ private fun preferenceScore(category: String, tastes: List<String>): Int {
         score + if (aliases[taste].orEmpty().any { it in normalized }) 10 else 0
     }
 }
+
+private fun recommendationRating(value: String?): Double =
+    value
+        ?.takeUnless { it.equals("null", ignoreCase = true) }
+        ?.replace(',', '.')
+        ?.toDoubleOrNull()
+        ?.coerceIn(0.0, 10.0)
+        ?: 0.0
 
 @Composable
 private fun NetworkStatusButton(state: UiState, onClick: () -> Unit) {
