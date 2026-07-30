@@ -9,7 +9,7 @@
     "gateway": "npm --prefix gateway start",
     "catalog-gateway": "npm --prefix catalog-gateway start",
     "web:preview": "node scripts/preview-web.js",
-    "android:debug": "powershell -NoProfile -Command \"Set-Location android; .\\gradlew.bat assembleDebug\"",
+    "android:debug": "powershell -NoProfile -Command \"$jbr='C:\\Program Files\\Android\\Android Studio\\jbr'; if (Test-Path $jbr) { $env:JAVA_HOME=$jbr; $env:PATH=\\\"$jbr\\bin;$env:PATH\\\" }; Set-Location android; .\\gradlew.bat assembleDebug\"",
     "check": "node scripts/check.js"
   }
 }

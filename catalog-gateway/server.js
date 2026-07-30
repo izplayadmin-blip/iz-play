@@ -10,7 +10,7 @@ const RAW_UPSTREAMS = String(
   process.env.CATALOG_UPSTREAMS ||
   process.env.XTREAM_BASE_URL ||
   process.env.DEFAULT_DNS ||
-  'http://cxst.shop'
+  'http://ortyu.online'
 )
 const UPSTREAMS = [...new Set(RAW_UPSTREAMS
   .split(',')
@@ -73,7 +73,7 @@ function pipeUpstream(req, res, target, attemptNext) {
       'Accept': req.headers.accept || '*/*'
     }
   }, upstreamRes => {
-    if ([502, 503, 504].includes(upstreamRes.statusCode || 0)) {
+    if ([403, 404, 429, 500, 502, 503, 504].includes(upstreamRes.statusCode || 0)) {
       upstreamRes.resume()
       return attemptNext(new Error('upstream_unavailable'))
     }

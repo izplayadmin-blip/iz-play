@@ -1,7 +1,7 @@
 # Integração VPN (WireGuard) — Arquitetura
 
 > Status: **planejamento** (2026-07-02). A VPS `209.14.85.55` agora é o **Super Peer Brasil** e não deve receber WireGuard.
-> A VPN futura deve ser instalada de forma isolada em `190.102.43.177`, sem rotear Gateway, Painel ou mídia nesta passagem.
+> A VPN Brasil está instalada de forma isolada em `209.14.84.61`, sem rotear Gateway, Painel ou mídia nesta passagem.
 > Web player fica de fora do túnel (limitação do navegador — ver §6).
 
 ## 1. Dados da VPN futura

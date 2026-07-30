@@ -67,7 +67,7 @@ Cada host/serviço  →  IZ Infra Agent (coleta real)  →  POST /api/infra/*  �
 - **Super Peer oficial (SwarmCloud)** — Node, sem Chromium (§14). Precisa de `signal1`/`signal2`/
   `accessToken` do dashboard. Ver `docs/DEPLOY.md`. Provedor de semeadura: `cxst.shop`
   (conta 547069, 100 conexões).
-- **VPN** — instalar/configurar na VPS **`190.102.43.177`** (§5). Integrar ao Gateway, Painel e
+- **VPN** — instalar/configurar na VPS **`209.14.84.61`** (§5). Integrar ao Gateway, Painel e
   monitoramento; registrar métricas e logs (isso já cai no estágio 2).
 
 ### Bug de auditoria já relatado (§3) — para investigar no estágio 3
@@ -84,4 +84,5 @@ agrega (`deviceMap`/`makeDeviceKey`). Investigar o fluxo `sendTelemetryPing` →
 
 ## Registro de progresso
 
-- **2026-07-02** — Roadmap criado. Estágio 1 em andamento (Super Peer + VPN `190.102.43.177`).
+- **2026-07-02** — Roadmap criado. Estágio 1 em andamento (Super Peer + VPN).
+- **2026-07-20** — VPN Brasil migrada para `209.14.84.61`.

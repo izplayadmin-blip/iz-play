@@ -29,7 +29,7 @@ SUPER PEER BRASIL 209.14.85.55
 PROXY 130.250.189.142
   proxy legado e rollback operacional
 
-VPN FUTURA 190.102.43.177
+VPN BRASIL 209.14.84.61
   WireGuard planejado, rede 10.66.1.0/24, ainda não integrado aos serviços
 ```
 
@@ -70,7 +70,7 @@ VPN FUTURA 190.102.43.177
 - Status atual: `Running`, integrado ao Painel Admin na aba **P2P / SwarmCloud**.
 - **Não reinstalar por cima** enquanto estiver saudável; isso pode criar processo concorrente ou derrubar o nó já registrado.
 
-### 6. VPN futura — `190.102.43.177`
+### 6. VPN Brasil — `209.14.84.61`
 
 - Próxima etapa isolada.
 - WireGuard planejado em `wg0`.
@@ -155,7 +155,7 @@ O Web Player salva histórico e progresso por perfil para:
 
 ## Rota protegida / VPN
 
-VPN WireGuard será instalada em etapa isolada na VPS 190.102.43.177, rede 10.66.1.0/24.
+VPN WireGuard instalada de forma isolada na VPS 209.14.84.61, rede 10.66.1.0/24.
 Nesta passagem ela é somente VPN de usuário final/privacidade. **Não rotear serviços, Gateway,
 Painel ou mídia pela VPN** até existir um plano específico de rotas e rollback.
 
@@ -176,6 +176,7 @@ Painel ou mídia pela VPN** até existir um plano específico de rotas e rollbac
   padronizado (`live-`/`vod-`/`series-`), monitor admin oculto por padrão e recomendação do Super
   Peer oficial.
 
-- **2026-07-02** — `209.14.85.55` foi formatada/reaproveitada como **Super Peer Brasil** (`http://209.14.85.55:8080`) usando SwarmCloud Server as Peer oficial. Painel Admin atualizado para mostrar clientes online, telemetria P2P e status do Super Peer. `/control/api` do Web Player oficial reapontado para o Painel Admin novo. VPN movida para etapa futura em `190.102.43.177`.
+- **2026-07-02** — `209.14.85.55` foi formatada/reaproveitada como **Super Peer Brasil** (`http://209.14.85.55:8080`) usando SwarmCloud Server as Peer oficial. Painel Admin atualizado para mostrar clientes online, telemetria P2P e status do Super Peer. `/control/api` do Web Player oficial reapontado para o Painel Admin novo. VPN movida para etapa futura.
+- **2026-07-20** — VPN Brasil migrada para `209.14.84.61`, mantendo WireGuard em `10.66.1.0/24` e status em `http://209.14.84.61:8088/status`.
 
 - **2026-07-03** — Corrigido bug de tela preta nos canais do Web Player: o transcode estava recebendo URL proxificada `https://web.izplay.tv/gateway/live/...`, gerando `403 Forbidden` no `iz-gateway`. Regra documentada: catálogo usa `/gateway`, mas mídia/transcode usa URL direta do provedor (`http://cxst.shop/live/...`).

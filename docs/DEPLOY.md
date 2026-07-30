@@ -12,7 +12,7 @@
 | Proxy | 130.250.189.142 | `iptv-proxy :8080`, legado/rollback | systemd |
 | Painel Admin (`admin.izplay.tv`) | 38.46.142.234 | nginx → node `:3000` | pm2 `izplay-panel` |
 | Super Peer Brasil | 209.14.85.55 | SwarmCloud Server as Peer :8080, dashboard Running | pm2 super-peer |
-| VPN futura | 190.102.43.177 | WireGuard planejado, rede 10.66.1.0/24 | systemd |
+| VPN Brasil | 209.14.84.61 | WireGuard, rede 10.66.1.0/24 | systemd |
 
 ## Segurança
 
@@ -58,12 +58,12 @@ Quando o DNS/TLS estiver ativo:
 Invoke-WebRequest https://admin.izplay.tv/api/client/config -UseBasicParsing
 ```
 
-## Instalar VPN futura (`190.102.43.177`)
+## Instalar VPN Brasil (`209.14.84.61`)
 
 A VPN WireGuard fica em etapa isolada. Não rotear Gateway, Painel, mídia ou serviços pela VPN nesta passagem.
 
 ```bash
-# Rodar na VPS 190.102.43.177, com backup/validação manual
+# Rodar na VPS 209.14.84.61, com backup/validação manual
 apt update && apt upgrade -y
 apt install -y wireguard qrencode ufw
 DEFIF=$(ip route | awk '/default/ {print $5; exit}')

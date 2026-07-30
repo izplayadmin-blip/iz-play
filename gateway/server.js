@@ -25,6 +25,9 @@ const MAX_TRANSCODES = Math.max(1, Number(process.env.GATEWAY_MAX_TRANSCODES || 
 const VPN_INTERFACE = String(process.env.VPN_INTERFACE || 'wg0')
 const VPN_LABEL = String(process.env.VPN_LABEL || 'Rota protegida')
 const FFMPEG_USER_AGENT = process.env.FFMPEG_USER_AGENT || 'Mozilla/5.0 IZPlay/1.3'
+const PROVIDER_FAILOVER_HOST = String(process.env.GATEWAY_PROVIDER_FAILOVER_HOST || '').trim().toLowerCase()
+const PROVIDER_FAILOVER_SOURCES = String(process.env.GATEWAY_PROVIDER_FAILOVER_SOURCES || '')
+  .split(',').map(value => value.trim().toLowerCase()).filter(Boolean)
 const sessions = new Map()
 const rateBuckets = new Map()
 
@@ -127,6 +130,9 @@ async function safeTarget(parsed) {
   if (!['http:', 'https:'].includes(target.protocol)) throw new Error('invalid_protocol')
   if (target.username || target.password) throw new Error('userinfo_not_allowed')
   if (!hostAllowed(target.hostname)) throw new Error('host_not_allowed')
+  if (PROVIDER_FAILOVER_HOST && PROVIDER_FAILOVER_SOURCES.includes(target.hostname.toLowerCase())) {
+    target.hostname = PROVIDER_FAILOVER_HOST
+  }
   const addresses = await dns.lookup(target.hostname, { all: true, verbatim: true })
   if (!addresses.length || addresses.some(item => isPrivateIp(item.address))) {
     throw new Error('private_destination_blocked')
@@ -297,7 +303,7 @@ async function handleTranscode(req, res, parsed) {
     const args = [
       '-hide_banner', '-loglevel', 'warning',
       '-user_agent', FFMPEG_USER_AGENT,
-      '-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '5',
+      '-reconnect', '1', '-reconnect_at_eof', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '5',
       '-i', target.toString(),
       '-map', '0:v:0?', '-map', '0:a:0?',
       '-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency',

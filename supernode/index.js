@@ -20,12 +20,13 @@
 const path = require('path')
 const http = require('http')
 const os = require('os')
-const puppeteer = require('puppeteer')
 
 const int = (v, d) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : d)
 
 const cfg = {
   topN: int(process.env.SUPERNODE_TOP_N, 10),
+  pilotChannelIds: String(process.env.SUPERNODE_PILOT_CHANNEL_IDS || '')
+    .split(',').map(v => v.trim()).filter(Boolean),
   pollMs: int(process.env.SUPERNODE_POLL_MS, 60000),
   dropGraceMs: int(process.env.SUPERNODE_DROP_GRACE_MS, 300000), // 5 min
   // teto de seguranca: nunca abrir mais conexoes simultaneas que isto
@@ -35,6 +36,7 @@ const cfg = {
   //  a) o formato do spec:            [{channel_id, name, viewers}]
   //  b) o /api/client/home do painel: {live:[{contentId, contentName, views}]}
   topChannelsUrl: process.env.SUPERNODE_TOP_CHANNELS_URL || 'http://127.0.0.1/gateway/top-channels',
+  feedToken: process.env.SUPERNODE_FEED_TOKEN || '',
   // credenciais Xtream que o super node usa p/ ABRIR os streams (conta dedicada!)
   xtream: {
     host: (process.env.XTREAM_HOST || 'http://cxst.shop').replace(/\/+$/, ''),
@@ -42,7 +44,9 @@ const cfg = {
     pass: process.env.XTREAM_PASS || ''
   },
   // P2P so funciona em HLS segmentado -> use m3u8
-  streamExt: (process.env.SUPERNODE_STREAM_EXT || 'm3u8').replace(/^\./, ''),
+  streamExt: (process.env.SUPERNODE_STREAM_EXT || 'ts').replace(/^\./, ''),
+  mediaGatewayUrl: (process.env.SUPERNODE_MEDIA_GATEWAY_URL || '').replace(/\/+$/, ''),
+  mediaGatewayToken: process.env.SUPERNODE_MEDIA_GATEWAY_TOKEN || '',
   // SwarmCloud: MESMOS valores dos clientes p/ entrar no MESMO swarm
   swarm: {
     appId: process.env.SWARM_APP_ID || 'web.izplay.tv',
@@ -60,6 +64,9 @@ const cfg = {
 const active = new Map()
 let browser = null
 let stopping = false
+let serviceStatus = 'starting'
+let lastFeedAt = null
+let lastFeedError = ''
 
 function log(...a) { console.log(new Date().toISOString(), '[supernode]', ...a) }
 
@@ -79,9 +86,14 @@ async function fetchTopChannels() {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 8000)
   try {
-    const res = await fetch(cfg.topChannelsUrl, { signal: ctrl.signal, headers: { 'Accept': 'application/json' } })
+    const headers = { 'Accept': 'application/json' }
+    if (cfg.feedToken) headers.Authorization = `Bearer ${cfg.feedToken}`
+    const res = await fetch(cfg.topChannelsUrl, { signal: ctrl.signal, headers })
     if (!res.ok) throw new Error('HTTP ' + res.status)
-    return normalizeTop(await res.json())
+    const payload = await res.json()
+    lastFeedAt = new Date().toISOString()
+    lastFeedError = ''
+    return normalizeTop(Array.isArray(payload) ? payload : payload.channels || payload)
   } finally {
     clearTimeout(timer)
   }
@@ -91,7 +103,12 @@ async function fetchTopChannels() {
 function streamUrl(channelId) {
   const u = encodeURIComponent(cfg.xtream.user)
   const p = encodeURIComponent(cfg.xtream.pass)
-  return `${cfg.xtream.host}/live/${u}/${p}/${encodeURIComponent(channelId)}.${cfg.streamExt}`
+  const direct = `${cfg.xtream.host}/live/${u}/${p}/${encodeURIComponent(channelId)}.${cfg.streamExt}`
+  if (!cfg.mediaGatewayUrl) return direct
+  const gateway = new URL(`${cfg.mediaGatewayUrl}/proxy`)
+  gateway.searchParams.set('url', direct)
+  if (cfg.mediaGatewayToken) gateway.searchParams.set('key', cfg.mediaGatewayToken)
+  return gateway.toString()
 }
 
 function peerPageUrl(ch) {
@@ -146,10 +163,15 @@ async function tick() {
   try {
     top = await fetchTopChannels()
   } catch (e) {
+    lastFeedError = e.message
     log('erro ao buscar top-channels:', e.message)
     return
   }
-  const wanted = top.slice(0, cfg.topN)
+  const wanted = cfg.pilotChannelIds.length
+    ? cfg.pilotChannelIds.map(id =>
+        top.find(channel => String(channel.channel_id) === id)
+        || { channel_id: id, name: `Canal ${id}`, viewers: 0 })
+    : top.slice(0, cfg.topN)
   const wantedIds = new Set(wanted.map(c => String(c.channel_id)))
 
   // liga/renova os canais do Top-N
@@ -199,14 +221,19 @@ function statusPayload() {
   }))
   const totals = channels.reduce((a, c) => ({
     peers: a.peers + c.peers,
+    p2pDownKB: a.p2pDownKB + c.p2pDownKB,
+    p2pUpKB: a.p2pUpKB + c.p2pUpKB,
+    httpDownKB: a.httpDownKB + c.httpDownKB,
     uploadKB: a.uploadKB + c.p2pUpKB,
     downloadKB: a.downloadKB + c.p2pDownKB + c.httpDownKB
-  }), { peers: 0, uploadKB: 0, downloadKB: 0 })
+  }), { peers: 0, p2pDownKB: 0, p2pUpKB: 0, httpDownKB: 0, uploadKB: 0, downloadKB: 0 })
   return {
     service: 'izplay-supernode',
     version: '0.1.0',
     ts: new Date().toISOString(),
+    status: serviceStatus,
     config: { topN: cfg.topN, maxConcurrent: cfg.maxConcurrent, pollMs: cfg.pollMs },
+    feed: { lastSuccessAt: lastFeedAt, lastError: lastFeedError },
     activeChannels: active.size,
     totals,
     channels,
@@ -226,12 +253,17 @@ function startStatusServer() {
 }
 
 async function main() {
+  startStatusServer()
   if (!cfg.xtream.user || !cfg.xtream.pass) {
-    log('ERRO: defina XTREAM_USER e XTREAM_PASS (conta dedicada com muitas conexoes simultaneas).')
-    process.exit(1)
+    serviceStatus = 'waiting_credentials'
+    log('AGUARDANDO: defina XTREAM_USER e XTREAM_PASS de uma conta dedicada com 10 conexoes.')
+    return
   }
   if (!cfg.swarm.token) log('AVISO: SWARM_TOKEN vazio — o P2P pode nao parear sem token.')
 
+  // Lazy load: o coordenador pode expor status sem consumir Chromium enquanto
+  // aguarda capacidade e uma conta Xtream dedicada.
+  const puppeteer = require('puppeteer')
   browser = await puppeteer.launch({
     headless: cfg.headless ? 'new' : false,
     executablePath: cfg.chromePath,
@@ -239,12 +271,14 @@ async function main() {
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
+      '--disable-web-security',
+      '--allow-file-access-from-files',
       '--autoplay-policy=no-user-gesture-required',
       '--disable-gpu',
       '--mute-audio'
     ]
   })
-  startStatusServer()
+  serviceStatus = 'running'
   log(`super node iniciado. topN=${cfg.topN} poll=${cfg.pollMs}ms grace=${cfg.dropGraceMs}ms host=${cfg.xtream.host}`)
   await tick()
   const loop = setInterval(tick, cfg.pollMs)
