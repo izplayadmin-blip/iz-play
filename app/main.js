@@ -38,8 +38,9 @@ const TRANSCODE_PORT = 9191
 // Gateway na VPS — usado APENAS como fallback quando a reprodução nativa falha.
 // O desktop sempre tenta tocar direto/mpv primeiro (melhor qualidade, zero banda
 // da VPS). Só recorre ao gateway em caso de falha de ACESSO (403/redirect/bloqueio),
-// para proteger a banda da VPS. Pode ser sobrescrito por env IZ_GATEWAY.
-const GATEWAY_BASE   = (process.env.IZ_GATEWAY || 'http://209.50.254.197').replace(/\/+$/,'')
+// para proteger a banda da VPS. Pode ser sobrescrito por env IZ_GATEWAY e é
+// atualizado em runtime pela config central do painel (IPC 'central-config').
+let GATEWAY_BASE     = (process.env.IZ_GATEWAY || 'http://209.50.254.197').replace(/\/+$/,'')
 const GATEWAY_UA     = 'VLC/3.0.20 LibVLC/3.0.20'
 
 const MPV_PATH   = path.join(__dirname, 'mpv.exe')
@@ -408,6 +409,18 @@ ipcMain.on('start-proxy', async (event, m3uUrl) => {
 
 ipcMain.on('stop-proxy', () => {
   if (proxyProcess) { try { proxyProcess.kill() } catch(e) {} proxyProcess = null }
+})
+
+// Config central do painel (renderer → main): o fallback de mídia (mpv/transcode)
+// passa a usar o gateway publicado pelo painel em vez do IP fixo.
+ipcMain.on('central-config', (event, payload) => {
+  try {
+    const base = String((payload && payload.videoGatewayBase) || '').trim().replace(/\/+$/,'')
+    if (/^https?:\/\//i.test(base) && base !== GATEWAY_BASE) {
+      GATEWAY_BASE = base
+      console.log('[config] gateway central atualizado:', GATEWAY_BASE)
+    }
+  } catch (e) {}
 })
 
 ipcMain.handle('clear-cache', async () => {

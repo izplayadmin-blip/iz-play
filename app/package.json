@@ -4,12 +4,20 @@
   "description": "IZ Play - App desktop Electron",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build:android-web": "powershell -ExecutionPolicy Bypass -File scripts/build-capacitor-web.ps1",
+    "cap:sync": "npm run build:android-web && npx cap sync android",
+    "cap:open": "npm run cap:sync && npx cap open android",
+    "cap:run": "npm run cap:sync && npx cap run android",
+    "apk:debug": "npm run cap:sync && cd android && gradlew.bat assembleDebug"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.6.7",
     "electron": "^40.10.2"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@ffprobe-installer/ffprobe": "^2.1.2"
   }

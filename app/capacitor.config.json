@@ -1,0 +1,27 @@
+{
+  "appId": "com.izplay.player",
+  "appName": "IZ Play",
+  "webDir": "mobile-dist",
+  "server": {
+    "hostname": "izplay.local",
+    "androidScheme": "https",
+    "cleartext": true,
+    "allowNavigation": [
+      "*.izplay.tv",
+      "admin.izplay.tv",
+      "web.izplay.tv",
+      "209.50.254.197",
+      "cxst.shop",
+      "*.cxst.shop"
+    ]
+  },
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "backgroundColor": "#000000"
+    }
+  }
+}

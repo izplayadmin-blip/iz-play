@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">IZ Play</string>
+    <string name="title_activity_main">IZ Play</string>
+    <string name="package_name">com.izplay.player</string>
+    <string name="custom_url_scheme">com.izplay.player</string>
+</resources>

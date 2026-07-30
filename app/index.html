@@ -17,8 +17,9 @@
 :root{
   --bg:#0a0a0a;--s1:#111;--s2:#181818;--s3:#222;
   --red:#cc0000;--red2:#e60000;--red3:#ff3333;
+  --accent:#cc0000;--accent-dark:#990000;--accent-soft:#ff3333;
   --txt:#f0f0f0;--muted:#888;
-  --border:rgba(204,0,0,0.2);
+  --border:rgba(204,0,0,0.22);
   --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   --mono:'Consolas','Courier New',monospace;
 }
@@ -111,7 +112,7 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--fo
 .nav-logo-btn img{width:100%;height:100%;object-fit:contain;filter:brightness(0) invert(1);}
 .nav-logo-txt{font-size:22px;font-weight:900;color:#fff;letter-spacing:0;}
 .nav-div{width:44px;height:1px;background:rgba(255,255,255,.22);margin:6px 0 10px;flex-shrink:0;}
-.leftnav:hover .nav-div,.leftnav:focus-within .nav-div{width:160px;}
+.leftnav:hover .nav-div,.leftnav:focus-within .nav-div{width:44px;}
 .nav-item{
   width:62px;height:54px;border-radius:10px;
   display:flex;flex-direction:row;align-items:center;justify-content:center;
@@ -120,25 +121,24 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--fo
   padding:0;flex-shrink:0;
 }
 .leftnav:hover .nav-item,.leftnav:focus-within .nav-item{width:188px;justify-content:flex-start;padding:0 17px;}
-.nav-item:hover{background:rgba(0,0,0,.2);color:#fff;}
-.nav-item.active{background:rgba(0,0,0,.35);color:#fff;}
+.nav-item:hover,.nav-cfg:hover{background:rgba(0,0,0,.12);color:#fff;}
+.nav-item.active,.nav-cfg.active{background:rgba(0,0,0,.34);color:#fff;}
 .nav-icon{display:flex;align-items:center;justify-content:center;width:32px;min-width:32px;}
 .nav-icon svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round;}
 .nav-icon .icon-fill{fill:currentColor;stroke:none;}
-.nav-item.active .nav-icon,.nav-item:hover .nav-icon{opacity:1;}
-.nav-user-dot{width:29px;height:29px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#7d0013;color:#fff;font-size:12px;font-weight:900;border:2px solid rgba(255,255,255,.55);}
+.nav-item.active .nav-icon,.nav-item:hover .nav-icon,.nav-cfg.active .nav-icon,.nav-cfg:hover .nav-icon{opacity:1;}
+.nav-user-dot{width:29px;height:29px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#171717;color:#fff;font-size:12px;font-weight:900;border:2px solid rgba(255,255,255,.62);}
 .nav-lbl{font-size:12px;font-weight:900;letter-spacing:0;text-transform:uppercase;color:rgba(255,255,255,.72);text-align:left;line-height:1.1;white-space:nowrap;opacity:0;max-width:0;overflow:hidden;transition:opacity .12s,max-width .18s;}
 .leftnav:hover .nav-lbl,.leftnav:focus-within .nav-lbl{opacity:1;max-width:130px;}
-.nav-item.active .nav-lbl,.nav-item:hover .nav-lbl{color:#fff;}
+.nav-item.active .nav-lbl,.nav-item:hover .nav-lbl,.nav-cfg.active .nav-lbl,.nav-cfg:hover .nav-lbl{color:#fff;}
 .nav-spacer{flex:1 1 auto;min-height:12px;}
 .nav-cfg{
-  width:62px;height:52px;border-radius:10px;
+  width:62px;height:54px;border-radius:10px;
   display:flex;flex-direction:row;align-items:center;justify-content:center;
   gap:12px;cursor:pointer;transition:background .15s,width .18s,justify-content .18s,padding .18s;
   color:rgba(255,255,255,.5);flex-shrink:0;
 }
 .leftnav:hover .nav-cfg,.leftnav:focus-within .nav-cfg{width:188px;justify-content:flex-start;padding:0 17px;}
-.nav-cfg:hover{background:rgba(0,0,0,.2);color:#fff;}
 .nav-time{font-size:11px;color:rgba(255,255,255,.72);font-family:var(--mono);text-align:center;padding:7px 0 2px;font-weight:700;flex-shrink:0;white-space:nowrap;}
 
 /* MAIN */
@@ -423,11 +423,27 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
 .simple-view{display:none;flex:1;flex-direction:column;overflow:hidden;background:#06080d;}
 .simple-view-head{height:58px;display:flex;align-items:center;padding:0 24px;border-bottom:1px solid rgba(255,255,255,.07);font-size:18px;font-weight:900;background:#0d1017;}
 .simple-view-body{flex:1;overflow:auto;padding:28px;}
-.simple-hero-card{min-height:220px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:linear-gradient(135deg,rgba(204,0,0,.22),rgba(10,14,23,.94));display:flex;align-items:center;gap:22px;padding:32px;}
-.simple-hero-icon{width:76px;height:76px;border-radius:22px;background:#e00000;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.simple-hero-card{min-height:220px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:linear-gradient(135deg,rgba(204,0,0,.18),rgba(10,14,23,.94));display:flex;align-items:center;gap:22px;padding:32px;}
+.simple-hero-icon{width:76px;height:76px;border-radius:22px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .simple-hero-icon svg{width:38px;height:38px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 .simple-hero-copy h2{font-size:25px;margin-bottom:8px;}
 .simple-hero-copy p{color:rgba(255,255,255,.56);font-size:14px;line-height:1.55;max-width:620px;}
+#viewUser{background:#0d0d0d;}
+#viewUser .simple-view-head{display:none;}
+#viewUser .simple-view-body{display:flex;min-height:100%;flex-direction:column;align-items:center;justify-content:center;padding:48px 28px;}
+#viewUser .simple-hero-card{min-height:0;border:0;background:transparent;padding:0;display:block;text-align:center;}
+#viewUser .simple-hero-icon{display:none;}
+#viewUser .simple-hero-copy h2{font-size:clamp(42px,5vw,66px);font-weight:950;letter-spacing:-.045em;margin-bottom:8px;color:#f4f4f4;}
+#viewUser .simple-hero-copy p{display:none;}
+#viewUser .user-summary{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));width:min(720px,100%);margin:26px auto 0;}
+#viewUser .simple-hero-copy[style]{margin-top:28px!important;text-align:center;}
+#viewUser .simple-hero-copy[style] h2{font-size:22px!important;color:#f4f4f4;}
+#viewUser .simple-hero-copy[style] p{display:block;margin:6px auto 0;color:rgba(255,255,255,.48);}
+#viewUser .movie-detail-btn.primary{height:44px;margin-top:22px!important;min-width:174px;border-radius:9px;}
+.user-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:22px;}
+.user-action-btn{height:44px;min-width:142px;border-radius:9px;border:1px solid rgba(255,255,255,.13);background:#111;color:#cfcfcf;font-size:13px;font-weight:900;cursor:pointer;padding:0 18px;}
+.user-action-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.user-action-btn:hover{filter:brightness(1.08);}
 .user-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px;}
 .user-summary-card{padding:18px;border-radius:12px;background:#10141c;border:1px solid rgba(255,255,255,.07);}
 .user-summary-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
@@ -439,6 +455,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
 .cfg-body{flex:1;overflow-y:auto;padding:24px;background:var(--bg);scrollbar-width:thin;}
 .cfg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
 .cfg-section{background:var(--s1);border:1px solid rgba(255,255,255,.06);border-radius:12px;overflow:hidden;}
+#userCard{display:none;}
 .cfg-section-hdr{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;}
 .cfg-section-icon{font-size:18px;}
 .cfg-section-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px;}
@@ -521,45 +538,46 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
 .movie-detail-plot{font-size:15px;line-height:1.65;color:rgba(255,255,255,.74);max-width:800px;margin-bottom:20px;}
 .movie-detail-actions{display:flex;gap:10px;flex-wrap:wrap;}
 .movie-detail-btn{height:45px;border-radius:8px;padding:0 20px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.09);color:#fff;font-size:13px;font-weight:900;cursor:pointer;}
-.movie-detail-btn.primary{background:#e00000;border-color:#e00000;}
+.movie-detail-btn.primary{background:var(--accent);border-color:var(--accent);color:#111;}
 .movie-detail-btn:hover{filter:brightness(1.1);transform:translateY(-1px);}
 @media(max-width:720px){.movie-detail-hero{height:310px}.movie-detail-content{grid-template-columns:110px 1fr;gap:18px;padding:0 18px 32px;margin-top:-45px}.movie-detail-poster{width:110px}.movie-detail-info{padding-top:50px}.movie-detail-title{font-size:24px}.movie-detail-plot{grid-column:1/-1}.movie-detail-play-top button{width:68px;height:68px;font-size:27px}}
 
-/* PROFILES */
-.profile-onboarding{position:fixed;inset:0;z-index:1300;display:none;align-items:center;justify-content:center;padding:28px;background:rgba(3,5,9,.97);overflow:auto;}
+/* PROFILES - MaxPlayer-inspired, IZ Play branded */
+.profile-onboarding{position:fixed;inset:0;z-index:1300;display:none;align-items:center;justify-content:center;padding:28px;background:#0d0d0d;overflow:auto;}
 .profile-onboarding.open{display:flex;}
-.profile-panel{width:min(880px,96vw);background:#101319;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:34px;box-shadow:0 32px 100px rgba(0,0,0,.62);}
-.profile-title{text-align:center;font-size:clamp(30px,5vw,52px);font-weight:950;letter-spacing:-.045em;color:#fff;}
-.profile-subtitle{text-align:center;color:rgba(255,255,255,.55);font-size:14px;margin:9px auto 28px;max-width:600px;line-height:1.5;}
-.profile-form{display:grid;grid-template-columns:190px 1fr;gap:30px;align-items:start;}
-.profile-avatar-current{aspect-ratio:1;border-radius:22px;background:#1b202a;border:2px solid #e00000;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;position:relative;}
-.profile-avatar-current svg{width:100%;height:100%;}
-.profile-avatar-edit{position:absolute;right:8px;bottom:8px;width:35px;height:35px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e00000;color:#fff;border:3px solid #101319;font-size:17px;font-weight:900;}
-.profile-field-label{display:block;color:#ffb000;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;}
-.profile-name-input{width:100%;height:58px;border-radius:9px;border:1px solid rgba(255,255,255,.18);background:#171b22;color:#fff;font-size:17px;padding:0 17px;outline:none;}
-.profile-name-input:focus{border-color:#e00000;box-shadow:0 0 0 3px rgba(204,0,0,.13);}
-.profile-genres-label{margin-top:22px;}
-.profile-genres{display:flex;flex-wrap:wrap;gap:9px;}
+.profile-panel{width:min(620px,96vw);background:transparent;border:0;border-radius:0;padding:0;box-shadow:none;}
+.profile-title{text-align:center;font-size:clamp(42px,5.2vw,68px);font-weight:950;letter-spacing:-.045em;color:#f4f4f4;margin-bottom:34px;}
+.profile-subtitle{display:none;}
+.profile-form{display:grid;grid-template-columns:104px 1fr;gap:24px;align-items:center;background:#1a1a1a;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:32px;}
+.profile-avatar-current{width:96px;aspect-ratio:1;border-radius:14px;background:#222;border:0;display:flex;align-items:center;justify-content:center;overflow:visible;cursor:pointer;position:relative;}
+.profile-avatar-current svg{width:100%;height:100%;border-radius:14px;display:block;}
+.profile-avatar-edit{position:absolute;right:-7px;bottom:-7px;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent);color:#171717;border:3px solid #1a1a1a;font-size:13px;font-weight:950;}
+.profile-field-label{display:block;color:var(--accent);font-size:11px;font-weight:950;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;}
+.profile-name-input{width:100%;height:50px;border-radius:9px;border:1px solid var(--accent-dark);background:#242424;color:#f5f5f5;font-size:16px;font-weight:800;padding:0 17px;outline:none;}
+.profile-name-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(204,0,0,.14);}
+.profile-genres-label,.profile-genres{display:none;}
 .profile-genre{height:36px;padding:0 14px;border-radius:18px;border:1px solid rgba(255,255,255,.14);background:#171b22;color:rgba(255,255,255,.68);font-size:12px;font-weight:800;cursor:pointer;}
-.profile-genre.selected{background:#e00000;border-color:#e00000;color:#fff;}
-.profile-actions{display:flex;justify-content:center;gap:12px;margin-top:30px;}
-.profile-action{height:48px;min-width:145px;border-radius:9px;border:1px solid rgba(255,255,255,.14);background:#171b22;color:#fff;font-size:13px;font-weight:900;cursor:pointer;}
-.profile-action.primary{background:#e00000;border-color:#e00000;}
+.profile-genre.selected{background:var(--accent);border-color:var(--accent);color:#171717;}
+.profile-actions{display:flex;justify-content:center;gap:12px;margin-top:24px;}
+.profile-action{height:42px;min-width:104px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:#111;color:#bdbdbd;font-size:13px;font-weight:900;cursor:pointer;}
+.profile-action.primary{min-width:130px;background:var(--accent);border-color:var(--accent);color:#111;}
+.profile-action:hover{filter:brightness(1.08);}
 .avatar-picker{position:fixed;inset:0;z-index:1310;display:none;align-items:center;justify-content:center;padding:26px;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);}
 .avatar-picker.open{display:flex;}
-.avatar-picker-panel{width:min(690px,95vw);max-height:88vh;overflow:auto;background:#14171c;border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:30px;}
-.avatar-picker-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
-.avatar-picker-title{font-size:24px;font-weight:900;color:#fff;}
+.avatar-picker-panel{width:min(520px,95vw);max-height:78vh;overflow:auto;background:#1a1a1a;border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:32px;box-shadow:0 34px 90px rgba(0,0,0,.58);}
+.avatar-picker-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px;}
+.avatar-picker-title{font-size:24px;font-weight:950;color:var(--accent);}
 .avatar-picker-close{border:0;background:transparent;color:#aaa;font-size:28px;cursor:pointer;}
-.avatar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:15px;}
-.avatar-option{aspect-ratio:1;border-radius:16px;border:3px solid transparent;background:#20252e;overflow:hidden;cursor:pointer;padding:0;}
-.avatar-option.selected{border-color:#ffb000;box-shadow:0 0 0 2px #14171c,0 0 0 4px #ffb000;}
+.avatar-grid{display:grid;grid-template-columns:repeat(4,78px);justify-content:center;gap:16px;}
+.avatar-option{aspect-ratio:1;border-radius:12px;border:3px solid transparent;background:#202020;overflow:hidden;cursor:pointer;padding:0;}
+.avatar-option.selected{border-color:var(--accent);box-shadow:0 0 0 2px #1a1a1a,0 0 0 4px var(--accent);}
 .avatar-option svg{width:100%;height:100%;display:block;}
-.profile-list{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;}
-.profile-list-card{width:120px;padding:12px;border:1px solid rgba(255,255,255,.08);background:#10141c;border-radius:12px;text-align:center;cursor:pointer;color:#fff;}
-.profile-list-avatar{width:72px;height:72px;border-radius:14px;overflow:hidden;margin:0 auto 8px;}
+.profile-list{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px;justify-content:center;}
+.profile-list-card{width:160px;padding:20px 12px 14px;border:1px solid rgba(255,255,255,.06);background:#181818;border-radius:14px;text-align:center;cursor:pointer;color:#fff;font-weight:900;}
+.profile-list-card:hover{background:#202020;box-shadow:0 18px 44px rgba(0,0,0,.35);}
+.profile-list-avatar{width:96px;height:96px;border-radius:14px;overflow:hidden;margin:0 auto 10px;}
 .profile-list-avatar svg{width:100%;height:100%;}
-@media(max-width:650px){.profile-panel{padding:26px 20px}.profile-form{grid-template-columns:110px 1fr;gap:18px}.profile-title{font-size:34px}.avatar-grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:650px){.profile-panel{width:100%}.profile-form{grid-template-columns:88px 1fr;gap:18px;padding:22px}.profile-title{font-size:36px}.profile-avatar-current{width:84px}.avatar-grid{grid-template-columns:repeat(3,78px)}}
 
 /* MEDIA PLAYER MODAL */
 .media-modal{position:fixed;inset:0;background:#000;z-index:120;display:none;flex-direction:column;}
@@ -673,7 +691,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
     <div class="nav-div"></div>
     <div class="nav-item active" id="navHome" onclick="switchView('home')">
       <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m2.5 11.2 9.5-8 9.5 8"/><path d="M4.8 9.5V21h5.1v-6.2h4.2V21h5.1V9.5"/><path d="M17.3 6.2V3.5h2.2v4.6"/></svg></span>
-      <span class="nav-lbl">In&iacute;cio</span>
+      <span class="nav-lbl">Inicio</span>
     </div>
     <div class="nav-item" id="navFav" onclick="switchView('favorites')">
       <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2.8 15 8.9l6.7 1-4.8 4.7 1.1 6.6-6-3.2-6 3.2 1.1-6.6-4.8-4.7 6.7-1Z"/></svg></span>
@@ -694,15 +712,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
     <div class="nav-spacer"></div>
     <div class="nav-cfg" id="navConfig" onclick="switchView('config')">
       <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M9.8 2.8h4.4l.7 2.5c.6.2 1.2.6 1.7 1l2.5-.7 2.2 3.8-1.9 1.8v1.9l1.9 1.8-2.2 3.8-2.5-.7c-.5.4-1.1.8-1.7 1l-.7 2.5H9.8L9.1 19c-.6-.2-1.2-.6-1.7-1l-2.5.7-2.2-3.8 1.9-1.8v-1.9L2.7 9.4l2.2-3.8 2.5.7c.5-.4 1.1-.8 1.7-1Z"/></svg></span>
-      <span class="nav-lbl">Configuração</span>
+      <span class="nav-lbl">Configuracao</span>
     </div>
     <div class="nav-item" id="navNotifications" onclick="switchView('notifications')">
       <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span>
-      <span class="nav-lbl">Notificações</span>
+      <span class="nav-lbl">Notificacoes</span>
     </div>
     <div class="nav-item" id="navUser" onclick="switchView('user')">
       <span class="nav-icon" aria-hidden="true"><span class="nav-user-dot" id="navUserInitial">U</span></span>
-      <span class="nav-lbl">Usuário</span>
+      <span class="nav-lbl">Usuarios</span>
     </div>
     <div class="nav-time" id="navTime">00:00</div>
   </div>
@@ -946,6 +964,31 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
             </div>
           </div>
 
+          <!-- INFRAESTRUTURA IZ (config central do painel) -->
+          <div class="cfg-section">
+            <div class="cfg-section-hdr">Infraestrutura IZ</div>
+            <div class="cfg-section-body">
+              <div class="cfg-row">
+                <div><div class="cfg-label">Gateway cat&aacute;logo</div><div class="cfg-sub">Rota central de listas (painel)</div></div>
+                <span class="cfg-status off" id="infraCatalogStatus">&mdash;</span>
+              </div>
+              <div class="cfg-row">
+                <div><div class="cfg-label">Gateway de m&iacute;dia</div><div class="cfg-sub">/video-gateway (proxy/transcode)</div></div>
+                <span class="cfg-status off" id="infraVideoStatus">&mdash;</span>
+              </div>
+              <div class="cfg-row">
+                <div><div class="cfg-label">P2P SwarmCloud</div><div class="cfg-sub">Compartilhamento entre aparelhos</div></div>
+                <span class="cfg-status off" id="infraP2pStatus">&mdash;</span>
+              </div>
+              <div class="cfg-row">
+                <div><div class="cfg-label">Super Peer Brasil</div><div class="cfg-sub">Peer permanente da malha P2P</div></div>
+                <span class="cfg-status off" id="infraSuperPeerStatus">&mdash;</span>
+              </div>
+              <div id="infraVpnRows"></div>
+              <button class="cfg-btn outline" onclick="refreshInfraStatus()">&#8634; Verificar agora</button>
+            </div>
+          </div>
+
           <!-- PLAYER -->
           <div class="cfg-section" id="playerCard">
             <div class="cfg-section-hdr">Player</div>
@@ -1089,8 +1132,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
           <div class="user-summary-card"><div class="user-summary-label">Validade da lista</div><div class="user-summary-value" id="userViewExpiry">Verificando...</div></div>
           <div class="user-summary-card"><div class="user-summary-label">Status</div><div class="user-summary-value" id="userViewStatus">Ativa</div></div>
           <div class="user-summary-card"><div class="user-summary-label">ConexÃµes</div><div class="user-summary-value" id="userViewConnections">--</div></div>
-          <div class="user-summary-card"><div class="user-summary-label">Dispositivo</div><div class="user-summary-value">Web Player</div></div>
+          <div class="user-summary-card"><div class="user-summary-label">Dispositivo</div><div class="user-summary-value" id="userViewDevice">Computador</div></div>
           <div class="user-summary-card"><div class="user-summary-label">Versão</div><div class="user-summary-value">2.1.0</div></div>
+        </div>
+        <div class="user-actions">
+          <button class="user-action-btn" onclick="doLogout()">Sair</button>
+          <button class="user-action-btn" onclick="showSetup()">Trocar usu&aacute;rio</button>
+          <button class="user-action-btn primary" onclick="openProfileOnboarding(true)">Editar usu&aacute;rios</button>
         </div>
         <div class="simple-hero-copy" style="margin-top:26px;">
           <h2 style="font-size:19px;">Perfis deste dispositivo</h2>
@@ -1161,14 +1209,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
 
 <div class="profile-onboarding" id="profileOnboarding">
   <div class="profile-panel">
-    <div class="profile-title" id="profileFormTitle">Crie seu perfil</div>
+    <div class="profile-title" id="profileFormTitle">Adicionar usu&aacute;rio</div>
     <div class="profile-subtitle">Escolha como deseja aparecer e conte um pouco do que gosta. O IZ Play usará essas escolhas para personalizar sua tela inicial.</div>
     <div class="profile-form">
       <div class="profile-avatar-current" id="profileAvatarCurrent" onclick="openAvatarPicker()">
         <div class="profile-avatar-edit">✎</div>
       </div>
       <div>
-        <label class="profile-field-label" for="profileNameInput">Nome do perfil</label>
+        <label class="profile-field-label" for="profileNameInput">Nome</label>
         <input class="profile-name-input" id="profileNameInput" maxlength="24" placeholder="Como devemos chamar você?"/>
         <div class="profile-field-label profile-genres-label">O que você gosta de assistir?</div>
         <div class="profile-genres" id="profileGenres"></div>
@@ -1176,7 +1224,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
     </div>
     <div class="profile-actions">
       <button class="profile-action" id="profileCancelBtn" onclick="closeProfileOnboarding()">Voltar</button>
-      <button class="profile-action primary" onclick="saveProfileOnboarding()">Criar perfil</button>
+      <button class="profile-action primary" onclick="saveProfileOnboarding()">Adicionar</button>
     </div>
   </div>
 </div>
@@ -1238,12 +1286,16 @@ if('serviceWorker' in navigator&&IS_WEB_PLAYER){
 }
 const COLORS=['#cc0000','#e67e22','#27ae60','#2980b9','#8e44ad','#16a085']
 const APP_VERSION='2.1.0'
-const DEFAULT_SERVER_DNS='http://cxst.shop'
+const DEFAULT_SERVER_DNS='http://ortyu.online'
+// DNS do provedor com rotação: se uma cair (bloqueio/404), a cascata tenta a próxima.
+// O painel controla isso via defaultDns/dnsServers; esta é a rede de segurança local.
+const FALLBACK_SERVER_DNS=['http://ortyu.online','http://1578.cloud','http://estadodespdrm.com','http://opthor.uk','http://dtiser.uk']
 const PANEL_CONFIG_URL=IS_WEB_PLAYER?'/control/api/client/config':'http://admin.izplay.tv/api/client/config'
 const DEFAULT_TELEMETRY_URL=IS_WEB_PLAYER?'/control/api':'http://admin.izplay.tv/api'
 const DEFAULT_GATEWAY_URL=''
 const WEB_GATEWAY_BASE='/gateway'
 const DESKTOP_CATALOG_GATEWAY='https://web.izplay.tv/gateway'
+const WEB_CATALOG_FALLBACK='/control/api/client/catalog'
 const VIDEO_GATEWAY_URL=IS_WEB_PLAYER?'/video-gateway':'http://209.50.254.197'
 const VIDEO_GATEWAY_TOKEN=''
 const EXTERNAL_EPG_URL='/epg/guide-xui-streamid.xml'
@@ -1327,13 +1379,20 @@ function retryMediaCompat(){
 
 function initCurrentProfile(){
   let profile=null
-  try{profile=JSON.parse(localStorage.getItem('izplay_current_profile')||'null')}catch(e){}
+  try{profile=JSON.parse(localStorage.getItem(currentProfileStorageKey())||'null')}catch(e){}
   if(!profile||!profile.id){
     profile={id:'default',name:'Meu perfil',avatar:'avatar-1',genres:[],onboardingComplete:false,createdAt:new Date().toISOString()}
-    try{localStorage.setItem('izplay_current_profile',JSON.stringify(profile))}catch(e){}
+    try{localStorage.setItem(currentProfileStorageKey(),JSON.stringify(profile))}catch(e){}
   }
   return profile
 }
+function accountStorageSuffix(){
+  const user=String(cfg.user||'sem-login').trim().toLowerCase()
+  const host=String(cfg.host||'sem-host').trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/+$/,'')
+  return encodeURIComponent(`${host}|${user}`).replace(/[%.]/g,'_')
+}
+function currentProfileStorageKey(){return `izplay_current_profile_${accountStorageSuffix()}`}
+function profilesStorageKey(){return `izplay_profiles_${accountStorageSuffix()}`}
 const PROFILE_GENRES=['Ação','Aventura','Comédia','Drama','Ficção científica','Terror','Suspense','Romance','Crime','Documentário','Animação','Família','Esportes','Novelas']
 const PROFILE_AVATARS=[
   ['avatar-1','#b7182b','#132b3a','#f2bd91','#2a2528'],
@@ -1368,15 +1427,15 @@ function avatarSvg(id){
 }
 function getProfiles(){
   try{
-    const rows=JSON.parse(localStorage.getItem('izplay_profiles')||'[]')
+    const rows=JSON.parse(localStorage.getItem(profilesStorageKey())||'[]')
     return Array.isArray(rows)?rows:[]
   }catch(e){return[]}
 }
 function saveProfiles(rows){
-  try{localStorage.setItem('izplay_profiles',JSON.stringify(rows.slice(0,6)))}catch(e){}
+  try{localStorage.setItem(profilesStorageKey(),JSON.stringify(rows.slice(0,6)))}catch(e){}
 }
 function persistCurrentProfile(){
-  localStorage.setItem('izplay_current_profile',JSON.stringify(currentProfile))
+  localStorage.setItem(currentProfileStorageKey(),JSON.stringify(currentProfile))
   const rows=getProfiles()
   const next=[currentProfile,...rows.filter(row=>row.id!==currentProfile.id)]
   saveProfiles(next)
@@ -1408,9 +1467,11 @@ function openProfileOnboarding(createNew=false){
   editingNewProfile=createNew
   selectedAvatarId=createNew?'avatar-'+(1+Math.floor(Math.random()*PROFILE_AVATARS.length)):(currentProfile.avatar||'avatar-1')
   selectedProfileGenres=createNew?[]:[...(currentProfile.genres||[])]
-  document.getElementById('profileFormTitle').textContent=createNew?'Adicionar perfil':'Crie seu perfil'
+  document.getElementById('profileFormTitle').textContent=(createNew||!currentProfile.onboardingComplete)?'Adicionar usuÃ¡rio':'Editar usuÃ¡rio'
   document.getElementById('profileNameInput').value=createNew?'':(currentProfile.onboardingComplete?currentProfile.name:'')
   document.getElementById('profileCancelBtn').style.display=currentProfile.onboardingComplete?'':'none'
+  const action=document.querySelector('#profileOnboarding .profile-action.primary')
+  if(action)action.textContent=(createNew||!currentProfile.onboardingComplete)?'Adicionar':'Salvar'
   updateProfileAvatarPreview()
   renderProfileGenres()
   document.getElementById('profileOnboarding').classList.add('open')
@@ -1452,8 +1513,10 @@ function updateProfileUI(){
   if(nav){nav.innerHTML=avatarSvg(avatar);nav.style.overflow='hidden'}
   const userName=document.getElementById('userViewName')
   const profileName=document.getElementById('userViewProfile')
-  if(userName)userName.textContent=currentProfile.name||cfg.user||'Minha conta'
+  const deviceName=document.getElementById('userViewDevice')
+  if(userName)userName.textContent='Quem estÃ¡ assistindo?'
   if(profileName)profileName.textContent=currentProfile.name||'Padrão'
+  if(deviceName)deviceName.textContent=IS_WEB_PLAYER?'Web Player':'Computador'
   updateAccountInfoUI()
   renderProfileList()
 }
@@ -1509,13 +1572,16 @@ function renderProfileList(){
   el.innerHTML=profiles.map(profile=>`<button class="profile-list-card" onclick='switchProfile(${JSON.stringify(profile.id)})'>
     <div class="profile-list-avatar">${avatarSvg(profile.avatar||'avatar-1')}</div>
     <b>${esc(profile.name)}</b>
-  </button>`).join('')
+  </button>`).join('')+`<button class="profile-list-card" onclick="openProfileOnboarding(true)">
+    <div class="profile-list-avatar" style="display:flex;align-items:center;justify-content:center;border:2px dashed rgba(204,0,0,.55);color:var(--accent);font-size:38px;background:#151515;">+</div>
+    <b>Adicionar usu...</b>
+  </button>`
 }
 function switchProfile(id){
   const profile=getProfiles().find(row=>row.id===id)
   if(!profile)return
   currentProfile=profile
-  localStorage.setItem('izplay_current_profile',JSON.stringify(profile))
+  localStorage.setItem(currentProfileStorageKey(),JSON.stringify(profile))
   reloadProfileState()
   updateProfileUI()
   switchView('home')
@@ -1575,15 +1641,34 @@ function normalizeHost(value){
 function joinApi(base,path){
   return String(base||'').replace(/\/+$/,'')+'/'+String(path||'').replace(/^\/+/,'')
 }
+function isHttpUrl(value){
+  return /^https?:\/\//i.test(String(value||'').trim())
+}
+function resolveCentralUrl(value){
+  // Config do painel pode vir relativa ("/gateway"): no desktop resolve contra o
+  // webPlayerUrl (https://web.izplay.tv). Absoluta passa direto; vazia retorna ''.
+  const raw=String(value||'').trim()
+  if(!raw)return ''
+  if(isHttpUrl(raw))return cleanBase(raw)
+  const web=cleanBase(appConfig.webPlayerUrl||'https://web.izplay.tv')
+  if(!isHttpUrl(web))return ''
+  return web+(raw.startsWith('/')?raw:'/'+raw)
+}
+function centralCatalogGateway(){
+  return resolveCentralUrl(appConfig.gatewayUrl)||DESKTOP_CATALOG_GATEWAY
+}
 function videoGatewayBase(){
   // Navegador não entra no túnel WireGuard. No Web Player, mídia deve usar sempre
   // a rota pública /video-gateway; VPN/rota protegida fica só para desktop/app nativo.
   if(IS_WEB_PLAYER)return cleanBase(VIDEO_GATEWAY_URL)
   const preference=settings.vpnServer||'auto'
   const protectedUrl=appConfig.protectedGatewayUrl||''
-  if(preference==='protected'&&protectedUrl)return cleanBase(protectedUrl)
-  if(preference==='auto'&&vpnAvailable&&protectedUrl)return cleanBase(protectedUrl)
-  return cleanBase(settings.videoGatewayUrl||appConfig.videoGatewayUrl||VIDEO_GATEWAY_URL)
+  if(preference==='protected'&&isHttpUrl(protectedUrl))return cleanBase(protectedUrl)
+  if(preference==='auto'&&vpnAvailable&&isHttpUrl(protectedUrl))return cleanBase(protectedUrl)
+  const configured=[settings.videoGatewayUrl,appConfig.videoGatewayUrl]
+    .map(resolveCentralUrl)
+    .find(value=>isHttpUrl(value))
+  return cleanBase(configured||VIDEO_GATEWAY_URL)
 }
 function videoGatewayToken(){
   return settings.videoGatewayToken||appConfig.videoGatewayToken||VIDEO_GATEWAY_TOKEN||''
@@ -1636,6 +1721,13 @@ function xtreamLiveUrlCandidates(ch){
   const user=encodeURIComponent(cfg.user)
   const pass=encodeURIComponent(cfg.pass)
   const id=encodeURIComponent(ch.id)
+  // No navegador, catálogo e stream precisam sair pela mesma origem HTTPS.
+  // Além de evitar mixed-content, isso preserva a afinidade de IP exigida por
+  // alguns painéis Xtream.
+  const sameOrigin=IS_WEB_PLAYER&&!IS_ANDROID_CAPACITOR
+    ?[`${location.origin}/live/${user}/${pass}/${id}.m3u8`,
+      `${location.origin}/live/${user}/${pass}/${id}.ts`]
+    :[]
   const roots=[...new Set([cfg.host,getDefaultServerDns(),DEFAULT_SERVER_DNS]
     .map(r=>cleanBase(r))
     .filter(r=>/^https?:\/\//i.test(r)&&!/\/gateway(?:\/)?$/i.test(r)))]
@@ -1650,7 +1742,7 @@ function xtreamLiveUrlCandidates(ch){
     `${base}/${user}/${pass}/live/${id}.ts`,
     `${base}/${user}/${pass}/live/${id}`
   ))
-  return [...new Set(out)]
+  return [...new Set([...sameOrigin,...out])]
 }
 function getStreamCandidates(url){
   const original=String(url||'')
@@ -1663,18 +1755,20 @@ function getStreamCandidates(url){
     : [...xtreamCandidates,original,swapped]
   const direct=[...new Set(ordered.filter(Boolean))]
   if(!IS_WEB_PLAYER)return direct
+  const httpsCandidates=direct.filter(candidate=>/^https:\/\//i.test(candidate))
+  const sameOrigin=httpsCandidates.filter(candidate=>candidate.startsWith(location.origin+'/'))
+  const remoteHttps=httpsCandidates.filter(candidate=>!candidate.startsWith(location.origin+'/'))
   const proxyFirst=[]
-  const transcodeSecond=[]
-  direct.forEach(candidate=>{
+  const transcodeLast=[]
+  ;[...sameOrigin,...remoteHttps].forEach(candidate=>{
     const proxied=gatewayProxyUrl(candidate)
     if(proxied)proxyFirst.push(proxied)
     const transcoded=gatewayTranscodeUrl(candidate)
-    if(transcoded)transcodeSecond.push(transcoded)
+    if(transcoded)transcodeLast.push(transcoded)
   })
-  // Canal ao vivo: transcode do provedor direto primeiro (igual aos filmes, que
-  // funcionam). O /proxy fica por ultimo porque o 403-HTML do Cloudflare e
-  // confundido com playlist e trava o hls.js.
-  return [...new Set([...transcodeSecond,...direct,...proxyFirst].filter(Boolean))]
+  // HTTPS da mesma origem primeiro. Proxy vem depois e transcode é o último
+  // recurso, evitando ocupar os poucos slots do FFmpeg antes de testar HLS.
+  return [...new Set([...sameOrigin,...proxyFirst,...remoteHttps,...transcodeLast].filter(Boolean))]
 }
 function getMediaCandidates(url){
   const original=String(url||'')
@@ -1744,13 +1838,13 @@ function getDefaultServerDns(){
 function getDnsCandidates(){
   if(IS_WEB_PLAYER){
     const list=Array.isArray(appConfig.dnsServers)?appConfig.dnsServers:[]
-    return [...new Set([appConfig.gatewayUrl,...list,WEB_GATEWAY_BASE]
+    return [...new Set([appConfig.gatewayUrl,WEB_CATALOG_FALLBACK,...list,WEB_GATEWAY_BASE]
       .filter(Boolean)
       .filter(value=>String(value).trim().startsWith('/'))
       .map(cleanBase))].filter(Boolean).slice(0,6)
   }
   const list=Array.isArray(appConfig.dnsServers)?appConfig.dnsServers:[]
-  return [...new Set([...list,appConfig.defaultDns,DEFAULT_SERVER_DNS].filter(Boolean).map(normalizeHost))].filter(Boolean).slice(0,10)
+  return [...new Set([...list,appConfig.defaultDns,...FALLBACK_SERVER_DNS].filter(Boolean).map(normalizeHost))].filter(Boolean).slice(0,10)
 }
 function cleanBase(value){
   return String(value||'').trim().replace(/\/+$/,'')
@@ -1872,9 +1966,13 @@ function catalogRequestCandidates(url){
   if(IS_WEB_PLAYER||!/\/player_api\.php(?:\?|$)/i.test(primary))return [primary]
   try{
     const parsed=new URL(primary)
+    // Ordem: direto → gateway central (config do painel) → proxy legado (fallback)
+    const legacyProxy=isHttpUrl(appConfig.proxyUrl)
+      ?[`${cleanBase(appConfig.proxyUrl)}/player_api.php${parsed.search}`]:[]
     return [...new Set([
       primary,
-      `${DESKTOP_CATALOG_GATEWAY}/player_api.php${parsed.search}`
+      `${centralCatalogGateway()}/player_api.php${parsed.search}`,
+      ...legacyProxy
     ])]
   }catch(e){
     return [primary]
@@ -1985,10 +2083,20 @@ async function loadClientConfig(){
         window.SWARM_TRACKER_ZONE=appConfig.swarmCloud.trackerZone||window.SWARM_TRACKER_ZONE
       }
       localStorage.setItem('izplay_app_config',JSON.stringify(appConfig))
+      notifyMainCentralConfig()
     }
   }catch(e){
     appConfig={defaultDns:DEFAULT_SERVER_DNS,...appConfig}
   }
+}
+function notifyMainCentralConfig(){
+  // Repassa o gateway de mídia resolvido ao processo principal: o fallback do
+  // mpv/transcode (GATEWAY_BASE) passa a seguir a config do painel.
+  if(IS_WEB_PLAYER||!ipc)return
+  try{
+    const base=resolveCentralUrl(appConfig.videoGatewayUrl)||cleanBase(VIDEO_GATEWAY_URL)
+    if(isHttpUrl(base))ipc.send('central-config',{videoGatewayBase:base})
+  }catch(e){}
 }
 function apiUrl(action='',extra=''){
   const base=`${cleanBase(cfg.host)}/player_api.php?username=${encodeURIComponent(cfg.user)}&password=${encodeURIComponent(cfg.pass)}`
@@ -2067,6 +2175,10 @@ async function doLogin(){
     err.textContent='Falha: '+e.message;console.error('Login IZ Play falhou',e);return
   }
   localStorage.setItem('izplaycfg',JSON.stringify(cfg))
+  currentProfile=initCurrentProfile()
+  selectedAvatarId=currentProfile.avatar||'avatar-1'
+  selectedProfileGenres=[...(currentProfile.genres||[])]
+  reloadProfileState()
   launchApp()
 }
 
@@ -3756,11 +3868,65 @@ async function refreshProtectedRouteStatus(){
     vpnAvailable=!!data?.vpn?.enabled
   }catch(e){vpnAvailable=false}
   vpnOn=settings.vpnServer==='protected'&&vpnAvailable
+  const panelVpns=Array.isArray(appConfig.vpnServers)?appConfig.vpnServers:[]
+  if(!vpnAvailable&&panelVpns.length){
+    // Gateway ainda sem túnel, mas o painel já publica servidores WireGuard (BR/EUA):
+    // mostra "disponível" informativo — peer por dispositivo será provisionado pelo painel.
+    status.textContent='Servidores prontos'
+    status.className='cfg-status off'
+    btn.disabled=true
+    btn.textContent='Aguardando provisionamento'
+    return false
+  }
   status.textContent=vpnAvailable?(vpnOn?'Em uso':'Disponível'):'Indisponível'
   status.className=`cfg-status ${vpnAvailable?'on':'off'}`
   btn.disabled=!vpnAvailable
   btn.textContent=vpnOn?'Usar rota automática':'Usar rota protegida'
   return vpnAvailable
+}
+// ─── Infraestrutura IZ: status da config central (painel) ─────────────────
+async function infraProbe(url,timeout=4000){
+  try{
+    const r=await timedFetch(url,{},timeout)
+    return r.ok||r.status<500
+  }catch(e){return false}
+}
+function setInfraStatus(id,ok,labelOn='Online',labelOff='Offline'){
+  const el=document.getElementById(id)
+  if(!el)return
+  if(ok===null){el.textContent='—';el.className='cfg-status off';return}
+  el.textContent=ok?labelOn:labelOff
+  el.className=`cfg-status ${ok?'on':'off'}`
+}
+async function renderVpnServers(){
+  const holder=document.getElementById('infraVpnRows')
+  if(!holder)return
+  const servers=Array.isArray(appConfig.vpnServers)?appConfig.vpnServers:[]
+  if(!servers.length){
+    holder.innerHTML='<div class="cfg-sub">Nenhum servidor VPN publicado pelo painel.</div>'
+    return
+  }
+  holder.innerHTML=servers.map(s=>{
+    const id='vpnSrv_'+String(s.id||'').replace(/[^a-z0-9_-]/gi,'')
+    const name=String(s.name||s.id||'VPN')
+    const sub=String(s.endpoint||s.url||'')
+    return `<div class="cfg-row"><div><div class="cfg-label">${name}</div><div class="cfg-sub">${sub}</div></div><span class="cfg-status off" id="${id}">Verificando</span></div>`
+  }).join('')
+  for(const s of servers){
+    const el=document.getElementById('vpnSrv_'+String(s.id||'').replace(/[^a-z0-9_-]/gi,''))
+    const ok=s.url?await infraProbe(cleanBase(s.url)+'/status'):false
+    if(el){el.textContent=ok?'Online':'Offline';el.className=`cfg-status ${ok?'on':'off'}`}
+  }
+}
+async function refreshInfraStatus(){
+  setInfraStatus('infraP2pStatus',!!(appConfig.swarmCloud&&appConfig.swarmCloud.enabled),'Ativo','Desativado')
+  renderVpnServers()
+  const catalog=centralCatalogGateway()
+  setInfraStatus('infraCatalogStatus',catalog?await infraProbe(cleanBase(catalog)+'/health'):null)
+  const video=resolveCentralUrl(appConfig.videoGatewayUrl)||cleanBase(VIDEO_GATEWAY_URL)
+  setInfraStatus('infraVideoStatus',video?await infraProbe(cleanBase(video)+'/health'):null)
+  const superPeer=cleanBase(appConfig.swarmCloud?.superPeerUrl||'')
+  setInfraStatus('infraSuperPeerStatus',superPeer?await infraProbe(superPeer+'/stats'):null)
 }
 async function toggleVpn(){
   const available=await refreshProtectedRouteStatus()
@@ -3922,8 +4088,17 @@ function startStream(url){
     const waitMs=/\/transcode\?/i.test(String(playUrl||''))?15000:7000
     window.fbTimer=setTimeout(()=>{if(!started)tryNext()},waitMs)
   }
-  function playCandidate(playUrl){
+  async function playCandidate(playUrl){
     lastAttemptedUrl=playUrl
+    if(ipc){
+      try{
+        const resolved=await ipc.invoke('play-stream',playUrl)
+        if(resolved&&resolved.success&&resolved.url){
+          playUrl=resolved.url
+          lastAttemptedUrl=playUrl
+        }
+      }catch(e){}
+    }
     armFallback(playUrl)
     if(isM3u8Url(playUrl)){
       loadHls(()=>{
@@ -4424,6 +4599,8 @@ async function initApp(){
   ensureDesktopDirectSession()
   if(cfg.host&&cfg.user&&cfg.pass)launchApp()
   else showSetup()
+  // Status da infraestrutura central (não bloqueia o boot)
+  setTimeout(()=>{refreshInfraStatus().catch(()=>{})},1500)
 }
 initSwarmDebugBox()
 initMediaProgressTracking()

@@ -1,0 +1,20 @@
+{
+  "appId": "com.izplay.player",
+  "appName": "IZ Play",
+  "webDir": "dist",
+  "server": {
+    "hostname": "izplay.local",
+    "androidScheme": "http",
+    "cleartext": true,
+    "allowNavigation": [
+      "web.izplay.tv",
+      "admin.izplay.tv",
+      "209.50.254.197",
+      "cxst.shop",
+      "*.cxst.shop"
+    ]
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}
