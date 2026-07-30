@@ -129,6 +129,7 @@ fun HomeScreen(vm: MainViewModel) {
                 clock = clock,
                 date = date,
                 profileName = state.activeProfile?.name ?: "Perfil",
+                profileAvatar = state.activeProfile?.avatar ?: 0,
                 selectedFocusRequester = selectedSidebarFocus,
                 onSelect = { item ->
                     nav = item
@@ -196,6 +197,8 @@ fun HomeScreen(vm: MainViewModel) {
                 title = media.title,
                 subtitle = media.subtitle,
                 fallbackUrl = media.fallbackUrl,
+                initialPositionMs = media.initialPositionMs,
+                onProgress = vm::recordPlaybackProgress,
                 onClose = vm::stopPlayback
             )
         }

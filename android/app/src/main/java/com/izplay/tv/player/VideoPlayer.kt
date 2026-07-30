@@ -23,6 +23,7 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.izplay.tv.data.remote.AppHttpClient
+import kotlinx.coroutines.delay
 
 /**
  * Player de vídeo baseado em ExoPlayer (Media3).
@@ -38,6 +39,9 @@ fun VideoPlayer(
     streamUrl: String?,
     fallbackUrl: String? = null,
     enableP2p: Boolean = false,
+    initialPositionMs: Long = 0L,
+    seekToMs: Long? = null,
+    onProgress: (positionMs: Long, durationMs: Long) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -46,6 +50,7 @@ fun VideoPlayer(
     }
     var candidateIndex by remember(playbackCandidates) { mutableIntStateOf(0) }
     val currentUrl = playbackCandidates.getOrNull(candidateIndex)
+    var lastPositionMs by remember(streamUrl) { mutableStateOf(initialPositionMs) }
 
     val exoPlayer = remember {
         val dataSourceFactory = OkHttpDataSource.Factory(AppHttpClient.create())
@@ -95,11 +100,31 @@ fun VideoPlayer(
                 }
                 .build()
             exoPlayer.setMediaItem(mediaItem)
+            val resumeAt = maxOf(initialPositionMs, lastPositionMs)
+            if (resumeAt > 0L) exoPlayer.seekTo(resumeAt)
             exoPlayer.prepare()
             exoPlayer.play()
         } else {
             exoPlayer.stop()
             exoPlayer.clearMediaItems()
+        }
+    }
+
+    LaunchedEffect(seekToMs) {
+        seekToMs?.let {
+            val target = it.coerceAtLeast(0L)
+            lastPositionMs = target
+            exoPlayer.seekTo(target)
+        }
+    }
+
+    LaunchedEffect(exoPlayer, currentUrl) {
+        while (true) {
+            val position = exoPlayer.currentPosition.coerceAtLeast(0L)
+            val duration = exoPlayer.duration.coerceAtLeast(0L)
+            lastPositionMs = position
+            onProgress(position, duration)
+            delay(500)
         }
     }
 

@@ -14,7 +14,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,7 +32,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +58,8 @@ fun FullscreenPlayback(
     title: String? = null,
     subtitle: String? = null,
     fallbackUrl: String? = null,
+    initialPositionMs: Long = 0L,
+    onProgress: (positionMs: Long, durationMs: Long) -> Unit = { _, _ -> },
     onClose: () -> Unit
 ) {
     BackHandler(onBack = onClose)
@@ -61,6 +68,10 @@ fun FullscreenPlayback(
     val interaction = remember { MutableInteractionSource() }
     var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var barVisible by remember { mutableStateOf(true) }
+    var positionMs by remember { mutableLongStateOf(initialPositionMs) }
+    var durationMs by remember { mutableLongStateOf(0L) }
+    var seekToMs by remember { mutableStateOf<Long?>(null) }
+    val isLive = subtitle == "AO VIVO"
 
     LaunchedEffect(Unit) { runCatching { surfaceFocus.requestFocus() } }
     LaunchedEffect(lastInteraction) {
@@ -75,8 +86,24 @@ fun FullscreenPlayback(
             .background(Color.Black)
             .focusRequester(surfaceFocus)
             .onPreviewKeyEvent { event ->
-                if (event.type == KeyEventType.KeyDown) lastInteraction = System.currentTimeMillis()
-                false
+                if (event.type != KeyEventType.KeyDown) {
+                    false
+                } else {
+                    lastInteraction = System.currentTimeMillis()
+                    when {
+                        !isLive && durationMs > 0L && event.key == Key.DirectionLeft -> {
+                            seekToMs = (positionMs - 10_000L).coerceAtLeast(0L)
+                            positionMs = seekToMs ?: positionMs
+                            true
+                        }
+                        !isLive && durationMs > 0L && event.key == Key.DirectionRight -> {
+                            seekToMs = (positionMs + 10_000L).coerceAtMost(durationMs)
+                            positionMs = seekToMs ?: positionMs
+                            true
+                        }
+                        else -> false
+                    }
+                }
             }
             .clickable(interactionSource = interaction, indication = null) {
                 lastInteraction = System.currentTimeMillis()
@@ -87,6 +114,13 @@ fun FullscreenPlayback(
             streamUrl = streamUrl,
             fallbackUrl = fallbackUrl,
             enableP2p = subtitle == "AO VIVO",
+            initialPositionMs = initialPositionMs,
+            seekToMs = seekToMs,
+            onProgress = { position, duration ->
+                positionMs = position
+                durationMs = duration
+                onProgress(position, duration)
+            },
             modifier = Modifier.fillMaxSize(),
         )
 
@@ -133,5 +167,60 @@ fun FullscreenPlayback(
                 }
             }
         }
+
+        AnimatedVisibility(
+            visible = barVisible && !isLive && durationMs > 0L,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth(),
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))
+                        )
+                    )
+                    .padding(horizontal = 32.dp, vertical = 24.dp)
+            ) {
+                LinearProgressIndicator(
+                    progress = { (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp),
+                    color = IzRed,
+                    trackColor = Color.White.copy(alpha = 0.25f),
+                )
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(formatPlaybackTime(positionMs), color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(
+                        "◀ 10s    OK controles    10s ▶",
+                        color = TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(formatPlaybackTime(durationMs), color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+private fun formatPlaybackTime(valueMs: Long): String {
+    val totalSeconds = (valueMs / 1000L).coerceAtLeast(0L)
+    val hours = totalSeconds / 3600L
+    val minutes = (totalSeconds % 3600L) / 60L
+    val seconds = totalSeconds % 60L
+    return if (hours > 0L) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%02d:%02d".format(minutes, seconds)
     }
 }

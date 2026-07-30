@@ -27,6 +27,12 @@ data class PlaybackPreferences(
     val parentalControl: Boolean = false
 )
 
+data class PlaybackProgress(
+    val positionMs: Long = 0L,
+    val durationMs: Long = 0L,
+    val updatedAt: Long = 0L,
+)
+
 /** Guarda config do provedor e favoritos de canais, filmes e series no DataStore. */
 class SettingsStore(private val context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
@@ -207,5 +213,50 @@ class SettingsStore(private val context: Context) {
             preferences[key] = updated
         }
         return updated
+    }
+
+    private fun playbackProgressKey(
+        account: String,
+        profileId: String,
+        mediaType: String,
+        contentId: String,
+    ) = stringPreferencesKey(
+        "playback_${accountSuffix(account)}_" +
+            "${profileId.hashCode().toUInt().toString(16)}_" +
+            "${mediaType}_${contentId.hashCode().toUInt().toString(16)}"
+    )
+
+    suspend fun loadPlaybackProgress(
+        account: String,
+        profileId: String,
+        mediaType: String,
+        contentId: String,
+    ): PlaybackProgress? {
+        val raw = context.dataStore.data.first()[
+            playbackProgressKey(account, profileId, mediaType, contentId)
+        ] ?: return null
+        val values = raw.split('|')
+        if (values.size != 3) return null
+        return PlaybackProgress(
+            positionMs = values[0].toLongOrNull() ?: return null,
+            durationMs = values[1].toLongOrNull() ?: return null,
+            updatedAt = values[2].toLongOrNull() ?: 0L,
+        )
+    }
+
+    suspend fun savePlaybackProgress(
+        account: String,
+        profileId: String,
+        mediaType: String,
+        contentId: String,
+        positionMs: Long,
+        durationMs: Long,
+    ) {
+        if (durationMs <= 0L) return
+        val safePosition = positionMs.coerceIn(0L, durationMs)
+        context.dataStore.edit {
+            it[playbackProgressKey(account, profileId, mediaType, contentId)] =
+                "$safePosition|$durationMs|${System.currentTimeMillis()}"
+        }
     }
 }

@@ -49,7 +49,10 @@ data class PlayingMedia(
     val url: String,
     val title: String,
     val subtitle: String? = null,
-    val fallbackUrl: String? = null
+    val fallbackUrl: String? = null,
+    val mediaType: String = "live",
+    val contentId: String = "",
+    val initialPositionMs: Long = 0L,
 )
 
 /** Status da infraestrutura central (null = ainda não verificado). */
@@ -385,20 +388,40 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     // ── Reprodução em tela cheia ───────────────────────────────────────────
 
-    private fun play(url: String, title: String, subtitle: String? = null) {
-        _state.value = _state.value.copy(
-            playing = PlayingMedia(url, title, subtitle, _state.value.streamFallback(url))
-        )
-    }
-
     fun playVod(vod: VodItem) {
         rememberOnDemand(vodId = vod.id)
-        play(vod.streamUrl, vod.name, "FILME")
+        viewModelScope.launch {
+            val resume = loadResumePosition("vod", vod.id)
+            _state.value = _state.value.copy(
+                playing = PlayingMedia(
+                    url = vod.streamUrl,
+                    title = vod.name,
+                    subtitle = "FILME",
+                    fallbackUrl = _state.value.streamFallback(vod.streamUrl),
+                    mediaType = "vod",
+                    contentId = vod.id,
+                    initialPositionMs = resume,
+                )
+            )
+        }
     }
 
     fun playEpisode(series: SeriesItem, episode: Episode) {
         rememberOnDemand(seriesId = series.id)
-        play(episode.streamUrl, episode.title, series.name)
+        viewModelScope.launch {
+            val resume = loadResumePosition("episode", episode.id)
+            _state.value = _state.value.copy(
+                playing = PlayingMedia(
+                    url = episode.streamUrl,
+                    title = episode.title,
+                    subtitle = series.name,
+                    fallbackUrl = _state.value.streamFallback(episode.streamUrl),
+                    mediaType = "episode",
+                    contentId = episode.id,
+                    initialPositionMs = resume,
+                )
+            )
+        }
     }
 
     private fun rememberOnDemand(vodId: String? = null, seriesId: String? = null) {
@@ -423,7 +446,49 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             delay(450)
             _state.value = _state.value.copy(
                 fullscreenTransition = false,
-                playing = PlayingMedia(url, title, "AO VIVO", _state.value.streamFallback(url))
+                playing = PlayingMedia(
+                    url = url,
+                    title = title,
+                    subtitle = "AO VIVO",
+                    fallbackUrl = _state.value.streamFallback(url),
+                )
+            )
+        }
+    }
+
+    private suspend fun loadResumePosition(mediaType: String, contentId: String): Long {
+        val config = _state.value.config ?: return 0L
+        val profileId = _state.value.activeProfileId ?: return 0L
+        val progress = store.loadPlaybackProgress(
+            profileAccountKey(config),
+            profileId,
+            mediaType,
+            contentId,
+        ) ?: return 0L
+        // Conteúdo praticamente concluído recomeça do início.
+        return progress.positionMs.takeIf {
+            it >= 10_000L && it < progress.durationMs - 30_000L
+        } ?: 0L
+    }
+
+    private var lastPlaybackProgressWriteAt = 0L
+
+    fun recordPlaybackProgress(positionMs: Long, durationMs: Long) {
+        val media = _state.value.playing ?: return
+        if (media.mediaType == "live" || media.contentId.isBlank() || durationMs <= 0L) return
+        val now = System.currentTimeMillis()
+        if (now - lastPlaybackProgressWriteAt < 5_000L) return
+        lastPlaybackProgressWriteAt = now
+        viewModelScope.launch {
+            val config = _state.value.config ?: return@launch
+            val profileId = _state.value.activeProfileId ?: return@launch
+            store.savePlaybackProgress(
+                profileAccountKey(config),
+                profileId,
+                media.mediaType,
+                media.contentId,
+                positionMs,
+                durationMs,
             )
         }
     }

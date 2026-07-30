@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.izplay.tv.R
+import com.izplay.tv.ui.screens.ProfileAvatar
 import com.izplay.tv.ui.theme.IzRedDark
 import com.izplay.tv.ui.theme.TextPrimary
 
@@ -84,6 +85,7 @@ fun Sidebar(
     clock: String,
     date: String,
     profileName: String = "Perfil",
+    profileAvatar: Int = 0,
     onSelect: (NavItem) -> Unit,
     selectedFocusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier
@@ -205,21 +207,7 @@ fun Sidebar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = if (expanded) Arrangement.Start else Arrangement.Center
         ) {
-            Box(
-                Modifier
-                    .size(38.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(Color(0xFF171717))
-                    .border(1.5.dp, Color(0xFFD60000), RoundedCornerShape(50)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    profileName.take(1).uppercase(),
-                    color = Color.White,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 15.sp
-                )
-            }
+            ProfileAvatar(profileAvatar, selected = true, size = 38)
             if (expanded) {
                 Spacer(Modifier.width(13.dp))
                 Text(
