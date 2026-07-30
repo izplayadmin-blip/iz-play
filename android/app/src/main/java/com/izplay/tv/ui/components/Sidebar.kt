@@ -2,6 +2,7 @@ package com.izplay.tv.ui.components
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -78,6 +79,12 @@ private val NAV_BOTTOM = listOf(
 
 private val COLLAPSED_WIDTH = 94.dp
 private val EXPANDED_WIDTH = 230.dp
+private val BRAND_MARK_WIDTH = 60.dp
+private val BRAND_HEIGHT = 40.dp
+private val BRAND_FULL_WIDTH = 202.dp
+private val BRAND_PLAY_WIDTH = BRAND_FULL_WIDTH - BRAND_MARK_WIDTH
+private val BRAND_START = (COLLAPSED_WIDTH - BRAND_MARK_WIDTH) / 2
+private const val BRAND_MOTION_MS = 220
 
 @Composable
 fun Sidebar(
@@ -95,13 +102,25 @@ fun Sidebar(
     val expanded = navHasFocus
     val width by animateDpAsState(
         targetValue = if (expanded) EXPANDED_WIDTH else COLLAPSED_WIDTH,
-        animationSpec = tween(durationMillis = 170),
+        animationSpec = tween(
+            durationMillis = if (expanded) BRAND_MOTION_MS else 190,
+            delayMillis = if (expanded) 0 else 60,
+            easing = FastOutSlowInEasing,
+        ),
         label = "sidebarWidth",
     )
-    val brandRevealWidth by animateDpAsState(
-        targetValue = if (expanded) 178.dp else 52.dp,
-        animationSpec = tween(durationMillis = 170),
-        label = "sidebarBrandReveal",
+    val playAlpha by animateFloatAsState(
+        targetValue = if (expanded) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = if (expanded) BRAND_MOTION_MS else 180,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "sidebarBrandPlayAlpha",
+    )
+    val playSlide by animateDpAsState(
+        targetValue = if (expanded) 0.dp else (-12).dp,
+        animationSpec = tween(durationMillis = BRAND_MOTION_MS, easing = FastOutSlowInEasing),
+        label = "sidebarBrandPlaySlide",
     )
     LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
 
@@ -120,30 +139,38 @@ fun Sidebar(
             Modifier
                 .fillMaxWidth()
                 .height(82.dp)
-                .padding(start = 21.dp),
+                .padding(start = BRAND_START),
             contentAlignment = Alignment.CenterStart,
         ) {
+            Image(
+                painter = painterResource(R.drawable.iz_sidebar_mark_official),
+                contentDescription = "IZ",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .width(BRAND_MARK_WIDTH)
+                    .height(BRAND_HEIGHT),
+            )
             Box(
                 modifier = Modifier
-                    .width(brandRevealWidth)
-                    .height(44.dp)
-                    .clipToBounds(),
+                    .offset(x = BRAND_MARK_WIDTH + playSlide)
+                    .width(BRAND_PLAY_WIDTH)
+                    .height(BRAND_HEIGHT)
+                    .clipToBounds()
+                    .graphicsLayer { alpha = playAlpha },
                 contentAlignment = Alignment.CenterStart,
             ) {
-                // Uma única imagem, escala e posição. A animação só revela ou
-                // recorta a palavra PLAY; o símbolo IZ nunca é substituído.
+                // PLAY usa a arte oficial em escala fixa; esta janela mostra
+                // somente a palavra, sem duplicar o símbolo IZ.
                 Image(
                     painter = painterResource(R.drawable.iz_sidebar_brand_official),
-                    contentDescription = "IZ Play",
+                    contentDescription = "PLAY",
                     contentScale = ContentScale.Fit,
                     alignment = Alignment.CenterStart,
                     modifier = Modifier
-                        .requiredWidth(178.dp)
-                        .height(44.dp)
-                        // requiredWidth centraliza o excesso quando o pai está
-                        // mais estreito. Compensar metade da diferença ancora
-                        // permanentemente a borda esquerda (o símbolo IZ).
-                        .offset(x = (178.dp - brandRevealWidth) / 2),
+                        .requiredWidth(BRAND_FULL_WIDTH)
+                        .height(BRAND_HEIGHT)
+                        // A arte é deslocada pela largura reservada ao IZ.
+                        .offset(x = -BRAND_MARK_WIDTH),
                 )
             }
         }
