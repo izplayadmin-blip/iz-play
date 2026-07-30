@@ -1,6 +1,5 @@
 package com.izplay.tv.ui.components
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -33,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -91,7 +91,16 @@ fun Sidebar(
     val firstFocus = remember { FocusRequester() }
     var navHasFocus by remember { mutableStateOf(false) }
     val expanded = navHasFocus
-    val width = if (expanded) EXPANDED_WIDTH else COLLAPSED_WIDTH
+    val width by animateDpAsState(
+        targetValue = if (expanded) EXPANDED_WIDTH else COLLAPSED_WIDTH,
+        animationSpec = tween(durationMillis = 170),
+        label = "sidebarWidth",
+    )
+    val brandRevealWidth by animateDpAsState(
+        targetValue = if (expanded) 178.dp else 52.dp,
+        animationSpec = tween(durationMillis = 170),
+        label = "sidebarBrandReveal",
+    )
     LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
 
     Column(
@@ -108,30 +117,32 @@ fun Sidebar(
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(82.dp),
-            contentAlignment = Alignment.Center
+                .height(82.dp)
+                .padding(start = 21.dp),
+            contentAlignment = Alignment.CenterStart,
         ) {
-            Crossfade(
-                targetState = expanded,
-                animationSpec = tween(durationMillis = 170),
-                label = "sidebarBrand"
-            ) { isExpanded ->
-                if (isExpanded) {
-                    Image(
-                        painter = painterResource(R.drawable.iz_sidebar_brand_official),
-                        contentDescription = "IZ Play",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.width(178.dp).height(44.dp)
-                    )
-                } else {
-                    // Recorte literal do mesmo wordmark oficial: apenas a palavra PLAY some.
-                    Image(
-                        painter = painterResource(R.drawable.iz_sidebar_mark_official),
-                        contentDescription = "IZ",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.width(52.dp).height(44.dp)
-                    )
-                }
+            Box(
+                modifier = Modifier
+                    .width(brandRevealWidth)
+                    .height(44.dp)
+                    .clipToBounds(),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                // Uma única imagem, escala e posição. A animação só revela ou
+                // recorta a palavra PLAY; o símbolo IZ nunca é substituído.
+                Image(
+                    painter = painterResource(R.drawable.iz_sidebar_brand_official),
+                    contentDescription = "IZ Play",
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.CenterStart,
+                    modifier = Modifier
+                        .requiredWidth(178.dp)
+                        .height(44.dp)
+                        // requiredWidth centraliza o excesso quando o pai está
+                        // mais estreito. Compensar metade da diferença ancora
+                        // permanentemente a borda esquerda (o símbolo IZ).
+                        .offset(x = (178.dp - brandRevealWidth) / 2),
+                )
             }
         }
 
