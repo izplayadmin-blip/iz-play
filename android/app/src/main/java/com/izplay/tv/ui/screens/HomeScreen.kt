@@ -35,6 +35,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -115,6 +116,7 @@ fun HomeScreen(vm: MainViewModel) {
     val state by vm.state.collectAsStateWithLifecycle()
     var nav by remember { mutableStateOf(NavItem.INICIO) }
     var drawerOpen by remember { mutableStateOf(false) }
+    val selectedSidebarFocus = remember { FocusRequester() }
 
     val now = Date()
     val clock = SimpleDateFormat("HH:mm", Locale("pt", "BR")).format(now)
@@ -127,6 +129,7 @@ fun HomeScreen(vm: MainViewModel) {
                 clock = clock,
                 date = date,
                 profileName = state.activeProfile?.name ?: "Perfil",
+                selectedFocusRequester = selectedSidebarFocus,
                 onSelect = { item ->
                     nav = item
                     if (item != NavItem.CANAIS) drawerOpen = false
@@ -147,7 +150,13 @@ fun HomeScreen(vm: MainViewModel) {
                     NavItem.FAVORITOS -> FavoritesLibraryScreen(vm, state)
                     NavItem.FILMES -> MoviesScreen(vm)
                     NavItem.SERIES -> SeriesScreen(vm)
-                    NavItem.CONFIG -> SettingsScreen(vm, state)
+                    NavItem.CONFIG -> SettingsScreen(
+                        vm = vm,
+                        state = state,
+                        onExitToSidebar = {
+                            runCatching { selectedSidebarFocus.requestFocus() }
+                        },
+                    )
                     NavItem.NOTIFICACOES -> PlaceholderScreen(
                         "Notificacoes",
                         "Avisos do suporte, novidades e alertas de lista.",

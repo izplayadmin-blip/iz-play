@@ -85,6 +85,7 @@ fun Sidebar(
     date: String,
     profileName: String = "Perfil",
     onSelect: (NavItem) -> Unit,
+    selectedFocusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier
 ) {
     val firstFocus = remember { FocusRequester() }
@@ -143,6 +144,15 @@ fun Sidebar(
         Spacer(Modifier.height(12.dp))
 
         NAV_TOP.forEach { item ->
+            val itemModifier = Modifier
+                .then(if (item == NavItem.INICIO) Modifier.focusRequester(firstFocus) else Modifier)
+                .then(
+                    if (item == selected && selectedFocusRequester != null) {
+                        Modifier.focusRequester(selectedFocusRequester)
+                    } else {
+                        Modifier
+                    }
+                )
             NavIcon(
                 item = item,
                 active = item == selected,
@@ -151,7 +161,7 @@ fun Sidebar(
                 onClick = {
                     onSelect(item)
                 },
-                modifier = if (item == NavItem.INICIO) Modifier.focusRequester(firstFocus) else Modifier
+                modifier = itemModifier
             )
             Spacer(Modifier.height(6.dp))
         }
@@ -159,6 +169,11 @@ fun Sidebar(
         Spacer(Modifier.weight(1f))
 
         NAV_BOTTOM.forEach { item ->
+            val itemModifier = if (item == selected && selectedFocusRequester != null) {
+                Modifier.focusRequester(selectedFocusRequester)
+            } else {
+                Modifier
+            }
             NavIcon(
                 item = item,
                 active = item == selected,
@@ -166,7 +181,8 @@ fun Sidebar(
                 onFocus = {},
                 onClick = {
                     onSelect(item)
-                }
+                },
+                modifier = itemModifier,
             )
             Spacer(Modifier.height(6.dp))
         }

@@ -18,6 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -42,7 +47,11 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun SettingsScreen(vm: MainViewModel, state: UiState) {
+fun SettingsScreen(
+    vm: MainViewModel,
+    state: UiState,
+    onExitToSidebar: () -> Unit,
+) {
     val ctx = LocalContext.current
     val versionName = remember {
         runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }
@@ -59,6 +68,14 @@ fun SettingsScreen(vm: MainViewModel, state: UiState) {
         Modifier
             .fillMaxSize()
             .background(PanelBlack)
+            .onPreviewKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft) {
+                    onExitToSidebar()
+                    true
+                } else {
+                    false
+                }
+            }
             .verticalScroll(rememberScrollState())
             .padding(start = 24.dp, top = 18.dp, end = 24.dp, bottom = 28.dp)
     ) {
