@@ -531,6 +531,10 @@ private fun StartDashboard(
     }
     val personalizedMovies = remember(state.allVod, tastes, vodCategoryNames) {
         state.allVod.asSequence()
+            // O provedor já entrega o catálogo em ordem editorial/recente.
+            // Limitar antes de normalizar e pontuar evita bloquear a thread
+            // principal (e, portanto, o D-pad) com dezenas de milhares de itens.
+            .take(1_200)
             .filter {
                 recommendationMatchesProfile(
                     title = it.name,
@@ -550,6 +554,7 @@ private fun StartDashboard(
     }
     val personalizedSeries = remember(state.allSeries, tastes, seriesCategoryNames) {
         state.allSeries.asSequence()
+            .take(800)
             .filter {
                 recommendationMatchesProfile(
                     title = it.name,
@@ -574,8 +579,7 @@ private fun StartDashboard(
         val recent = state.allVod
             .asSequence()
             .filter { !it.posterUrl.isNullOrBlank() }
-            .sortedByDescending { it.addedAt }
-            .take(300)
+            .take(600)
             .toList()
         recent
             .filter { recommendationRating(it.rating) >= 7.0 }
@@ -597,16 +601,22 @@ private fun StartDashboard(
         state.allVod,
         state.allSeries
     ) {
-        val vodById = state.allVod.associateBy { it.id }
-        val seriesById = state.allSeries.associateBy { it.id }
-        buildList {
-            state.recentVodIds.mapNotNull(vodById::get).forEach {
-                add(HomePosterEntry(it.id, it.name, it.posterUrl, it.rating, HomePosterType.MOVIE))
-            }
-            state.recentSeriesIds.mapNotNull(seriesById::get).forEach {
-                add(HomePosterEntry(it.id, it.name, it.coverUrl, it.rating, HomePosterType.SERIES))
-            }
-        }.take(8)
+        if (state.recentVodIds.isEmpty() && state.recentSeriesIds.isEmpty()) {
+            emptyList()
+        } else {
+            val wantedVod = state.recentVodIds.toSet()
+            val wantedSeries = state.recentSeriesIds.toSet()
+            val vodById = state.allVod.asSequence().filter { it.id in wantedVod }.associateBy { it.id }
+            val seriesById = state.allSeries.asSequence().filter { it.id in wantedSeries }.associateBy { it.id }
+            buildList {
+                state.recentVodIds.mapNotNull(vodById::get).forEach {
+                    add(HomePosterEntry(it.id, it.name, it.posterUrl, it.rating, HomePosterType.MOVIE))
+                }
+                state.recentSeriesIds.mapNotNull(seriesById::get).forEach {
+                    add(HomePosterEntry(it.id, it.name, it.coverUrl, it.rating, HomePosterType.SERIES))
+                }
+            }.take(8)
+        }
     }
     // Só preparamos candidatos suficientes para preencher as fileiras visíveis.
     // Evita normalizar milhares de títulos na thread principal de TV boxes simples.
