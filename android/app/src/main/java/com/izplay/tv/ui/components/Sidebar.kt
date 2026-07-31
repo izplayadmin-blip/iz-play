@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,14 +40,18 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import com.izplay.tv.R
 import com.izplay.tv.ui.screens.ProfileAvatar
 import com.izplay.tv.ui.theme.IzRedDark
@@ -122,6 +127,7 @@ fun Sidebar(
         animationSpec = tween(durationMillis = BRAND_MOTION_MS, easing = FastOutSlowInEasing),
         label = "sidebarBrandPlaySlide",
     )
+    val officialWordmark = ImageBitmap.imageResource(R.drawable.iz_sidebar_brand_official)
     LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
 
     Column(
@@ -159,19 +165,22 @@ fun Sidebar(
                     .graphicsLayer { alpha = playAlpha },
                 contentAlignment = Alignment.CenterStart,
             ) {
-                // PLAY usa a arte oficial em escala fixa; esta janela mostra
-                // somente a palavra, sem duplicar o símbolo IZ.
-                Image(
-                    painter = painterResource(R.drawable.iz_sidebar_brand_official),
-                    contentDescription = "PLAY",
-                    contentScale = ContentScale.Fit,
-                    alignment = Alignment.CenterStart,
-                    modifier = Modifier
-                        .requiredWidth(BRAND_FULL_WIDTH)
-                        .height(BRAND_HEIGHT)
-                        // A arte é deslocada pela largura reservada ao IZ.
-                        .offset(x = -BRAND_MARK_WIDTH),
-                )
+                Canvas(Modifier.fillMaxSize()) {
+                    val markSourceWidth = 570.coerceAtMost(officialWordmark.width)
+                    drawImage(
+                        image = officialWordmark,
+                        srcOffset = IntOffset(markSourceWidth, 0),
+                        srcSize = IntSize(
+                            officialWordmark.width - markSourceWidth,
+                            officialWordmark.height,
+                        ),
+                        dstOffset = IntOffset.Zero,
+                        dstSize = IntSize(
+                            size.width.toInt(),
+                            size.height.toInt(),
+                        ),
+                    )
+                }
             }
         }
 
