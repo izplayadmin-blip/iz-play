@@ -575,7 +575,7 @@ private fun StartDashboard(
     // O Hero nao deve promover automaticamente um titulo de nota baixa apenas
     // por ter sido o ultimo adicionado. Entre os itens recentes com arte,
     // priorizamos os melhores avaliados; o mais novo continua como desempate.
-    val latestMovie = remember(state.allVod) {
+    val heroCandidate = remember(state.allVod) {
         val recent = state.allVod
             .asSequence()
             .filter { !it.posterUrl.isNullOrBlank() }
@@ -590,11 +590,20 @@ private fun StartDashboard(
             ?: recent.firstOrNull()
             ?: state.allVod.firstOrNull()
     }
-    LaunchedEffect(latestMovie?.id) { vm.loadHeroDetail(latestMovie) }
+    // O refresh silencioso pode substituir allVod poucos segundos depois da
+    // abertura. O destaque escolhido nesta sessão não acompanha essa troca:
+    // assim título, arte e sinopse nunca saltam para outro filme diante do usuário.
+    var fixedHeroMovie by remember { mutableStateOf<VodItem?>(null) }
+    LaunchedEffect(heroCandidate?.id) {
+        if (fixedHeroMovie == null && heroCandidate != null) {
+            fixedHeroMovie = heroCandidate
+        }
+    }
+    LaunchedEffect(fixedHeroMovie?.id) { vm.loadHeroDetail(fixedHeroMovie) }
     // Titulo, nota e arte basicos aparecem imediatamente. A segunda chamada
     // apenas enriquece sinopse/backdrop quando chegar, sem segurar toda a Home.
-    val heroMovie = state.heroVod?.takeIf { it.id == latestMovie?.id } ?: latestMovie
-    val heroSeries = personalizedSeries.firstOrNull()
+    val heroMovie = state.heroVod?.takeIf { it.id == fixedHeroMovie?.id } ?: fixedHeroMovie
+    val heroSeries = personalizedSeries.firstOrNull().takeIf { heroCandidate == null }
     val continueWatching = remember(
         state.recentVodIds,
         state.recentSeriesIds,
@@ -669,11 +678,11 @@ private fun StartDashboard(
         item {
             HeroBanner(
                 eyebrow = "DESTAQUE",
-                title = heroMovie?.name ?: if (latestMovie == null) heroSeries?.name ?: "IZ Play" else "IZ Play",
+                title = heroMovie?.name ?: if (heroCandidate == null) heroSeries?.name ?: "IZ Play" else "IZ Play",
                 subtitle = heroMovie?.plot
-                    ?: (if (latestMovie == null) heroSeries?.plot else null)
+                    ?: (if (heroCandidate == null) heroSeries?.plot else null)
                     ?: "Preparando o melhor do seu catálogo.",
-                imageUrl = heroMovie?.posterUrl ?: if (latestMovie == null) heroSeries?.coverUrl else null,
+                imageUrl = heroMovie?.posterUrl ?: if (heroCandidate == null) heroSeries?.coverUrl else null,
                 backdropUrl = heroMovie?.backdropUrl,
                 backdropMobileUrl = heroMovie?.backdropMobileUrl,
                 backdropPositionX = heroMovie?.backdropPositionX ?: 65f,
@@ -688,7 +697,7 @@ private fun StartDashboard(
                 onWatch = {
                     when {
                         heroMovie != null -> vm.selectVod(heroMovie)
-                        latestMovie == null && heroSeries != null -> vm.selectSeries(heroSeries)
+                        heroCandidate == null && heroSeries != null -> vm.selectSeries(heroSeries)
                         else -> onOpen(NavItem.CANAIS)
                     }
                 }
