@@ -274,7 +274,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             applyHomeSnapshot(config, home)
             loadAccountProfiles(config)
             updateStartup("Tudo pronto!", 1f)
-            delay(80)
+            warmHomeImages()
             _state.value = _state.value.copy(startupLoading = false, loading = false)
             return
         }
@@ -324,9 +324,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             VodCatalog(_state.value.vodCategories, _state.value.allVod),
             SeriesCatalog(_state.value.seriesCategories, _state.value.allSeries)
         )
-        delay(220)
+        warmHomeImages()
         _state.value = _state.value.copy(startupLoading = false, loading = false)
-        viewModelScope.launch { warmHomeImages() }
         viewModelScope.launch {
             // Dá prioridade total à primeira renderização e ao foco do controle.
             // Os catálogos grandes são atualizados em sequência depois da entrada.
@@ -607,9 +606,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val app = getApplication<Application>()
         val snapshot = _state.value
         val urls = buildList {
-            snapshot.allVod.firstOrNull()?.posterUrl?.let(::add)
-            snapshot.allVod.take(2).mapNotNullTo(this) { it.posterUrl }
-            snapshot.allSeries.firstOrNull()?.coverUrl?.let(::add)
+            snapshot.allVod.asSequence()
+                .filter { !it.posterUrl.isNullOrBlank() }
+                .sortedByDescending { it.rating?.replace(',', '.')?.toDoubleOrNull() ?: 0.0 }
+                .take(8)
+                .mapNotNullTo(this) { it.posterUrl }
+            snapshot.allSeries.asSequence()
+                .filter { !it.coverUrl.isNullOrBlank() }
+                .sortedByDescending { it.rating?.replace(',', '.')?.toDoubleOrNull() ?: 0.0 }
+                .take(4)
+                .mapNotNullTo(this) { it.coverUrl }
         }.filter { it.isNotBlank() }.distinct()
 
         withTimeoutOrNull(2_000) {
@@ -965,6 +971,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     config = attempt.config,
                     vodCategories = cleanCategories(attempt.value.categories),
                     allVod = attempt.value.items,
+                    vodCatalogComplete = true,
                     selectedVodCategoryId = _state.value.selectedVodCategoryId
                         ?: attempt.value.categories.firstOrNull()?.id
                 )

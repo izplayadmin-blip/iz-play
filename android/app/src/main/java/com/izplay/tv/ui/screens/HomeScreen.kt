@@ -66,6 +66,7 @@ import java.text.SimpleDateFormat
 import java.text.Normalizer
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 private val PAGE_PADDING = 44.dp
 private const val HOME_RAIL_LIMIT = 8
@@ -119,6 +120,15 @@ fun HomeScreen(vm: MainViewModel) {
     var nav by remember { mutableStateOf(NavItem.INICIO) }
     var drawerOpen by remember { mutableStateOf(false) }
     val selectedSidebarFocus = remember { FocusRequester() }
+
+    // Um unico dono define o foco inicial. A Sidebar nao disputa mais o foco
+    // com o conteudo enquanto os catalogos e imagens terminam de recompor.
+    LaunchedEffect(state.startupLoading) {
+        if (!state.startupLoading) {
+            delay(100)
+            runCatching { selectedSidebarFocus.requestFocus() }
+        }
+    }
 
     val now = Date()
     val clock = SimpleDateFormat("HH:mm", Locale("pt", "BR")).format(now)
@@ -557,16 +567,29 @@ private fun StartDashboard(
             .take(80)
             .toList()
     }
-    // O destaque é editorial e igual para todos: o último filme adicionado
-    // pelo fornecedor. A personalização fica somente nas fileiras abaixo.
+    // O Hero nao deve promover automaticamente um titulo de nota baixa apenas
+    // por ter sido o ultimo adicionado. Entre os itens recentes com arte,
+    // priorizamos os melhores avaliados; o mais novo continua como desempate.
     val latestMovie = remember(state.allVod) {
-        state.allVod.maxByOrNull { it.addedAt } ?: state.allVod.firstOrNull()
+        val recent = state.allVod
+            .asSequence()
+            .filter { !it.posterUrl.isNullOrBlank() }
+            .sortedByDescending { it.addedAt }
+            .take(300)
+            .toList()
+        recent
+            .filter { recommendationRating(it.rating) >= 7.0 }
+            .maxWithOrNull(
+                compareBy<VodItem> { recommendationRating(it.rating) }
+                    .thenBy { it.addedAt }
+            )
+            ?: recent.firstOrNull()
+            ?: state.allVod.firstOrNull()
     }
     LaunchedEffect(latestMovie?.id) { vm.loadHeroDetail(latestMovie) }
-    // Nunca combine os dados básicos do catálogo com os detalhes que ainda
-    // estão chegando. Até o item completo estar pronto, o hero institucional
-    // ocupa exatamente o mesmo espaço e evita título/sinopse/arte híbridos.
-    val heroMovie = state.heroVod?.takeIf { it.id == latestMovie?.id }
+    // Titulo, nota e arte basicos aparecem imediatamente. A segunda chamada
+    // apenas enriquece sinopse/backdrop quando chegar, sem segurar toda a Home.
+    val heroMovie = state.heroVod?.takeIf { it.id == latestMovie?.id } ?: latestMovie
     val heroSeries = personalizedSeries.firstOrNull()
     val continueWatching = remember(
         state.recentVodIds,

@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
@@ -102,7 +103,24 @@ fun Sidebar(
     selectedFocusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier
 ) {
-    val firstFocus = remember { FocusRequester() }
+    val orderedNavItems = remember { NAV_TOP + NAV_BOTTOM }
+    val navFocusRequesters = remember {
+        orderedNavItems.associateWith { FocusRequester() }
+    }
+    fun focusRequesterFor(item: NavItem): FocusRequester =
+        if (item == selected && selectedFocusRequester != null) selectedFocusRequester
+        else navFocusRequesters.getValue(item)
+    fun navigationModifier(item: NavItem): Modifier {
+        val index = orderedNavItems.indexOf(item)
+        return Modifier
+            .focusProperties {
+                if (index > 0) up = focusRequesterFor(orderedNavItems[index - 1])
+                if (index < orderedNavItems.lastIndex) {
+                    down = focusRequesterFor(orderedNavItems[index + 1])
+                }
+            }
+            .focusRequester(focusRequesterFor(item))
+    }
     var navHasFocus by remember { mutableStateOf(false) }
     val expanded = navHasFocus
     val width by animateDpAsState(
@@ -128,8 +146,6 @@ fun Sidebar(
         label = "sidebarBrandPlaySlide",
     )
     val officialWordmark = ImageBitmap.imageResource(R.drawable.iz_sidebar_brand_official)
-    LaunchedEffect(Unit) { runCatching { firstFocus.requestFocus() } }
-
     Column(
         modifier = modifier
             .fillMaxHeight()
@@ -193,15 +209,6 @@ fun Sidebar(
         Spacer(Modifier.height(12.dp))
 
         NAV_TOP.forEach { item ->
-            val itemModifier = Modifier
-                .then(if (item == NavItem.INICIO) Modifier.focusRequester(firstFocus) else Modifier)
-                .then(
-                    if (item == selected && selectedFocusRequester != null) {
-                        Modifier.focusRequester(selectedFocusRequester)
-                    } else {
-                        Modifier
-                    }
-                )
             NavIcon(
                 item = item,
                 active = item == selected,
@@ -210,7 +217,7 @@ fun Sidebar(
                 onClick = {
                     onSelect(item)
                 },
-                modifier = itemModifier
+                modifier = navigationModifier(item)
             )
             Spacer(Modifier.height(6.dp))
         }
@@ -218,11 +225,6 @@ fun Sidebar(
         Spacer(Modifier.weight(1f))
 
         NAV_BOTTOM.forEach { item ->
-            val itemModifier = if (item == selected && selectedFocusRequester != null) {
-                Modifier.focusRequester(selectedFocusRequester)
-            } else {
-                Modifier
-            }
             NavIcon(
                 item = item,
                 active = item == selected,
@@ -231,7 +233,7 @@ fun Sidebar(
                 onClick = {
                     onSelect(item)
                 },
-                modifier = itemModifier,
+                modifier = navigationModifier(item),
             )
             Spacer(Modifier.height(6.dp))
         }
