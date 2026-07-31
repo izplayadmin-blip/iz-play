@@ -522,7 +522,11 @@ private fun StartDashboard(
     val personalizedMovies = remember(state.allVod, tastes, vodCategoryNames) {
         state.allVod.asSequence()
             .filter {
-                preferenceScore(vodCategoryNames[it.categoryId].orEmpty(), tastes) > 0 &&
+                recommendationMatchesProfile(
+                    title = it.name,
+                    category = vodCategoryNames[it.categoryId].orEmpty(),
+                    tastes = tastes,
+                ) &&
                     !it.posterUrl.isNullOrBlank() &&
                     recommendationRating(it.rating) >= 6.5
             }
@@ -537,7 +541,11 @@ private fun StartDashboard(
     val personalizedSeries = remember(state.allSeries, tastes, seriesCategoryNames) {
         state.allSeries.asSequence()
             .filter {
-                preferenceScore(seriesCategoryNames[it.categoryId].orEmpty(), tastes) > 0 &&
+                recommendationMatchesProfile(
+                    title = it.name,
+                    category = seriesCategoryNames[it.categoryId].orEmpty(),
+                    tastes = tastes,
+                ) &&
                     !it.coverUrl.isNullOrBlank() &&
                     recommendationRating(it.rating) >= 6.5
             }
@@ -555,7 +563,10 @@ private fun StartDashboard(
         state.allVod.maxByOrNull { it.addedAt } ?: state.allVod.firstOrNull()
     }
     LaunchedEffect(latestMovie?.id) { vm.loadHeroDetail(latestMovie) }
-    val heroMovie = state.heroVod?.takeIf { it.id == latestMovie?.id } ?: latestMovie
+    // Nunca combine os dados básicos do catálogo com os detalhes que ainda
+    // estão chegando. Até o item completo estar pronto, o hero institucional
+    // ocupa exatamente o mesmo espaço e evita título/sinopse/arte híbridos.
+    val heroMovie = state.heroVod?.takeIf { it.id == latestMovie?.id }
     val heroSeries = personalizedSeries.firstOrNull()
     val continueWatching = remember(
         state.recentVodIds,
@@ -625,10 +636,11 @@ private fun StartDashboard(
         item {
             HeroBanner(
                 eyebrow = "DESTAQUE",
-                title = heroMovie?.name ?: heroSeries?.name ?: state.selectedChannel?.name ?: "IZ Play",
-                subtitle = heroMovie?.plot ?: heroSeries?.plot
-                    ?: "Achamos que você vai gostar desta seleção preparada para o seu perfil.",
-                imageUrl = heroMovie?.posterUrl ?: heroSeries?.coverUrl ?: state.selectedChannel?.logoUrl,
+                title = heroMovie?.name ?: if (latestMovie == null) heroSeries?.name ?: "IZ Play" else "IZ Play",
+                subtitle = heroMovie?.plot
+                    ?: (if (latestMovie == null) heroSeries?.plot else null)
+                    ?: "Preparando o melhor do seu catálogo.",
+                imageUrl = heroMovie?.posterUrl ?: if (latestMovie == null) heroSeries?.coverUrl else null,
                 backdropUrl = heroMovie?.backdropUrl,
                 backdropMobileUrl = heroMovie?.backdropMobileUrl,
                 backdropPositionX = heroMovie?.backdropPositionX ?: 65f,
@@ -643,7 +655,7 @@ private fun StartDashboard(
                 onWatch = {
                     when {
                         heroMovie != null -> vm.selectVod(heroMovie)
-                        heroSeries != null -> vm.selectSeries(heroSeries)
+                        latestMovie == null && heroSeries != null -> vm.selectSeries(heroSeries)
                         else -> onOpen(NavItem.CANAIS)
                     }
                 }
@@ -1189,6 +1201,24 @@ private fun recommendationRating(value: String?): Double =
         ?.toDoubleOrNull()
         ?.coerceIn(0.0, 10.0)
         ?: 0.0
+
+private fun recommendationMatchesProfile(
+    title: String,
+    category: String,
+    tastes: List<String>,
+): Boolean {
+    if (preferenceScore(category, tastes) <= 0) return false
+
+    // Alguns fornecedores classificam Malhação em categorias genéricas como
+    // Nacional, Juvenil ou Drama. Isso não transforma a novela em uma escolha
+    // válida para quem não marcou explicitamente Novelas.
+    val normalizedTitle = Normalizer.normalize(
+        title.lowercase(Locale.ROOT),
+        Normalizer.Form.NFD,
+    ).replace(Regex("\\p{M}+"), "")
+    val requiresNovelTaste = "malhacao" in normalizedTitle
+    return !requiresNovelTaste || tastes.any { it.equals("Novelas", ignoreCase = true) }
+}
 
 @Composable
 private fun NetworkStatusButton(state: UiState, onClick: () -> Unit) {
