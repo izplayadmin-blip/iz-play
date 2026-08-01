@@ -572,10 +572,16 @@ private fun StartDashboard(
             .take(80)
             .toList()
     }
-    // O Hero nao deve promover automaticamente um titulo de nota baixa apenas
-    // por ter sido o ultimo adicionado. Entre os itens recentes com arte,
-    // priorizamos os melhores avaliados; o mais novo continua como desempate.
-    val heroCandidate = remember(state.allVod) {
+    // O painel escolhe um unico destaque global a partir da audiencia agregada.
+    // A TV recebe somente o ID publico do VOD: nenhuma credencial XUI.ONE entra
+    // no APK e o perfil local nao interfere no Hero.
+    val centralHeroId = state.clientConfig?.homeHero?.vodId.orEmpty()
+    val centralHero = remember(state.allVod, centralHeroId) {
+        centralHeroId.takeIf(String::isNotBlank)?.let { wanted ->
+            state.allVod.firstOrNull { it.id == wanted }
+        }
+    }
+    val fallbackHero = remember(state.allVod) {
         val recent = state.allVod
             .asSequence()
             .filter { !it.posterUrl.isNullOrBlank() }
@@ -590,13 +596,14 @@ private fun StartDashboard(
             ?: recent.firstOrNull()
             ?: state.allVod.firstOrNull()
     }
-    // O refresh silencioso pode substituir allVod poucos segundos depois da
-    // abertura. O destaque escolhido nesta sessão não acompanha essa troca:
-    // assim título, arte e sinopse nunca saltam para outro filme diante do usuário.
+    val heroCandidate = centralHero ?: fallbackHero
+    // O refresh silencioso do catálogo não troca o destaque. A única mudança
+    // permitida é a chegada tardia da decisão central do painel.
     var fixedHeroMovie by remember { mutableStateOf<VodItem?>(null) }
-    LaunchedEffect(heroCandidate?.id) {
-        if (fixedHeroMovie == null && heroCandidate != null) {
-            fixedHeroMovie = heroCandidate
+    LaunchedEffect(heroCandidate?.id, centralHero?.id) {
+        when {
+            centralHero != null && fixedHeroMovie?.id != centralHero.id -> fixedHeroMovie = centralHero
+            fixedHeroMovie == null && heroCandidate != null -> fixedHeroMovie = heroCandidate
         }
     }
     LaunchedEffect(fixedHeroMovie?.id) { vm.loadHeroDetail(fixedHeroMovie) }

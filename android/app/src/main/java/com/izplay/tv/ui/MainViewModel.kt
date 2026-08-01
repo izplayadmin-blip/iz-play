@@ -402,6 +402,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     initialPositionMs = resume,
                 )
             )
+            sendTelemetry(
+                type = "watch_content",
+                contentType = "vod",
+                contentId = vod.id,
+                contentName = vod.name,
+            )
         }
     }
 
@@ -1230,7 +1236,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private suspend fun sendTelemetry(type: String, channel: Channel? = null) = withContext(Dispatchers.IO) {
+    private suspend fun sendTelemetry(
+        type: String,
+        channel: Channel? = null,
+        contentType: String = "",
+        contentId: String = "",
+        contentName: String = "",
+    ) = withContext(Dispatchers.IO) {
         val clientConfig = effectiveConfig()
         val base = clientConfig.telemetryBase ?: return@withContext
         val config = _state.value.config
@@ -1254,6 +1266,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             put("uploadMbps", c.uploadMbps); put("pingMs", c.pingMs); put("jitterMs", c.jitterMs)
             put("lossPct", c.lossPct); put("channelId", channel?.id.orEmpty())
             put("channelName", channel?.name.orEmpty())
+            put("contentType", contentType.take(24))
+            put("contentId", contentId.take(80))
+            put("contentName", contentName.take(180))
             put("p2pEnabled", clientConfig.swarmCloud.enabled)
             put("p2pTokenConfigured", BuildConfig.SWARMCLOUD_TOKEN.isNotBlank())
             put("superPeerConfigured", clientConfig.swarmCloud.superPeerUrl.isNotBlank())

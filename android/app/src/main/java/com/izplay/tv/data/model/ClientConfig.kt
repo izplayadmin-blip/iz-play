@@ -29,6 +29,16 @@ data class SwarmCloudInfo(
 )
 
 @Serializable
+data class HomeHeroInfo(
+    val vodId: String = "",
+    val title: String = "",
+    val source: String = "",
+    val views: Int = 0,
+    val currentViewers: Int = 0,
+    val generatedAt: String = ""
+)
+
+@Serializable
 data class ClientConfig(
     val defaultDns: String = "",
     val dnsServers: List<String> = emptyList(),
@@ -38,6 +48,7 @@ data class ClientConfig(
     val videoGatewayUrl: String = "",
     val protectedGatewayUrl: String = "",
     val webPlayerUrl: String = "",
+    val homeHero: HomeHeroInfo = HomeHeroInfo(),
     val swarmCloud: SwarmCloudInfo = SwarmCloudInfo(),
     val vpnServers: List<VpnServerInfo> = emptyList()
 ) {

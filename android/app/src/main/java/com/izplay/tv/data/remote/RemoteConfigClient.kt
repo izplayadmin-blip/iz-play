@@ -1,6 +1,7 @@
 package com.izplay.tv.data.remote
 
 import com.izplay.tv.data.model.ClientConfig
+import com.izplay.tv.data.model.HomeHeroInfo
 import com.izplay.tv.data.model.SwarmCloudInfo
 import com.izplay.tv.data.model.VpnServerInfo
 import kotlinx.coroutines.Dispatchers
@@ -83,6 +84,18 @@ class RemoteConfigClient(
             ).takeIf { it.id.isNotBlank() || it.url.isNotBlank() }
         } ?: emptyList()
 
+        val heroObj = root["homeHero"] as? JsonObject
+        fun heroString(key: String): String =
+            (heroObj?.get(key) as? JsonPrimitive)?.content?.trim().orEmpty()
+        val homeHero = HomeHeroInfo(
+            vodId = heroString("vodId"),
+            title = heroString("title"),
+            source = heroString("source"),
+            views = heroString("views").toIntOrNull() ?: 0,
+            currentViewers = heroString("currentViewers").toIntOrNull() ?: 0,
+            generatedAt = heroString("generatedAt")
+        )
+
         return ClientConfig(
             defaultDns = str("defaultDns"),
             dnsServers = dnsServers,
@@ -92,6 +105,7 @@ class RemoteConfigClient(
             videoGatewayUrl = str("videoGatewayUrl"),
             protectedGatewayUrl = str("protectedGatewayUrl"),
             webPlayerUrl = str("webPlayerUrl"),
+            homeHero = homeHero,
             swarmCloud = swarm,
             vpnServers = vpns
         )

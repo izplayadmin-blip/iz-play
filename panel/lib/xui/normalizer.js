@@ -42,6 +42,7 @@ function normalizeStreams(payload) {
       id: String(id || ''),
       streamKey: opaqueId('stream', id),
       name: String(first(row, ['stream_display_name', 'name', 'title'], '')).slice(0, 180),
+      type: String(first(row, ['stream_type', 'type', 'category_type'], '')).toLowerCase().slice(0, 40),
       categoryId: String(first(row, ['category_id', 'categoryId'], '')),
       serverId: String(first(row, ['server_id', 'serverId'], '')),
       online: ['0', 'online', 'running'].includes(String(first(row, ['stream_status'], '')).toLowerCase())

@@ -654,6 +654,51 @@ app.post(
   }
 )
 
+function selectGlobalMovieHero() {
+  const telemetryMovies = buildContentRanking(contentEventRows(), 100)
+    .filter(item => item.contentType === 'vod')
+  const xuiStreams = xuiCollector.overview().topStreams || []
+  const xuiById = new Map(xuiStreams.map(stream => [String(stream.id || ''), stream]))
+
+  const merged = telemetryMovies.map(movie => {
+    const live = xuiById.get(String(movie.contentId))
+    const currentViewers = Number(live?.viewers || 0)
+    return {
+      ...movie,
+      currentViewers,
+      globalScore: Number(movie.views || 0) * 10 + currentViewers * 12
+    }
+  })
+
+  // Quando o XUI.ONE informa explicitamente o tipo do stream, ele tambem pode
+  // fornecer o Hero mesmo antes de existir historico suficiente no IZ Play.
+  for (const stream of xuiStreams) {
+    const type = String(stream.type || '').toLowerCase()
+    if (!['movie', 'movies', 'vod'].includes(type)) continue
+    if (merged.some(item => String(item.contentId) === String(stream.id))) continue
+    merged.push({
+      contentId: String(stream.id || ''),
+      contentName: String(stream.name || ''),
+      views: 0,
+      currentViewers: Number(stream.viewers || 0),
+      globalScore: Number(stream.viewers || 0) * 12
+    })
+  }
+
+  const winner = merged
+    .filter(item => item.contentId && item.contentName)
+    .sort((a, b) => b.globalScore - a.globalScore || b.views - a.views)[0]
+  if (!winner) return null
+  return {
+    vodId: String(winner.contentId),
+    title: String(winner.contentName),
+    source: 'izplay+xuione',
+    views: Number(winner.views || 0),
+    currentViewers: Number(winner.currentViewers || 0),
+    generatedAt: new Date().toISOString()
+  }
+}
+
 app.get('/api/client/config', (req, res) => {
   res.json({
     defaultDns: panelConfig.defaultDns,
@@ -664,6 +709,7 @@ app.get('/api/client/config', (req, res) => {
     videoGatewayUrl: panelConfig.videoGatewayUrl,
     protectedGatewayUrl: panelConfig.protectedGatewayUrl,
     webPlayerUrl: panelConfig.webPlayerUrl,
+    homeHero: selectGlobalMovieHero(),
     swarmCloud: {
       enabled: panelConfig.swarmCloudEnabled,
       url: panelConfig.swarmCloudUrl,
