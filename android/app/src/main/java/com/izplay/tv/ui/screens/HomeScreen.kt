@@ -125,6 +125,16 @@ fun HomeScreen(vm: MainViewModel) {
     var nav by remember { mutableStateOf(NavItem.INICIO) }
     var drawerOpen by remember { mutableStateOf(false) }
     val selectedSidebarFocus = remember { FocusRequester() }
+    var homeEntered by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(70)
+        homeEntered = true
+    }
+    val homeEntrance by animateFloatAsState(
+        targetValue = if (homeEntered) 1f else 0f,
+        animationSpec = tween(durationMillis = 420),
+        label = "homeEntrance"
+    )
 
     // Um unico dono define o foco inicial. A Sidebar nao disputa mais o foco
     // com o conteudo enquanto os catalogos e imagens terminam de recompor.
@@ -140,7 +150,12 @@ fun HomeScreen(vm: MainViewModel) {
     val date = SimpleDateFormat("EEE dd/MM", Locale("pt", "BR")).format(now).uppercase()
 
     Box(Modifier.fillMaxSize().background(PanelBlack)) {
-        Row(Modifier.fillMaxSize()) {
+        Row(
+            Modifier.fillMaxSize().graphicsLayer {
+                alpha = homeEntrance
+                translationY = (1f - homeEntrance) * 18f
+            }
+        ) {
             Sidebar(
                 selected = nav,
                 clock = clock,
