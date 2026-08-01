@@ -6,6 +6,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -51,6 +54,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
+import coil.compose.rememberAsyncImagePainter
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.izplay.tv.data.model.Channel
@@ -647,24 +652,24 @@ private fun StartDashboard(
         contentPadding = PaddingValues(bottom = 28.dp)
     ) {
         item {
-            HeroBanner(
+            if (heroMovie != null) HeroBanner(
                 eyebrow = "DESTAQUE",
-                title = heroMovie?.name ?: "IZ Play",
-                subtitle = heroMovie?.plot ?: "O filme mais assistido no IZ Play.",
-                imageUrl = heroMovie?.posterUrl,
-                backdropUrl = heroMovie?.backdropUrl,
-                backdropMobileUrl = heroMovie?.backdropMobileUrl,
-                backdropPositionX = heroMovie?.backdropPositionX ?: 65f,
-                backdropPositionY = heroMovie?.backdropPositionY ?: 50f,
-                backdropScale = heroMovie?.backdropScale ?: 1f,
-                overlayOpacity = heroMovie?.overlayOpacity ?: 0.82f,
-                year = heroMovie?.year,
-                rating = heroMovie?.rating,
-                durationSecs = heroMovie?.durationSecs ?: 0,
-                category = heroMovie?.categoryId?.let(vodCategoryNames::get),
-                onWatch = {
-                    heroMovie?.let(vm::selectVod) ?: onOpen(NavItem.FILMES)
-                }
+                title = heroMovie.name,
+                subtitle = heroMovie.plot ?: "O filme mais assistido no IZ Play.",
+                imageUrl = heroMovie.posterUrl,
+                backdropUrl = heroMovie.backdropUrl,
+                backdropMobileUrl = heroMovie.backdropMobileUrl,
+                backdropPositionX = heroMovie.backdropPositionX,
+                backdropPositionY = heroMovie.backdropPositionY,
+                backdropScale = heroMovie.backdropScale,
+                overlayOpacity = heroMovie.overlayOpacity,
+                year = heroMovie.year,
+                rating = heroMovie.rating,
+                durationSecs = heroMovie.durationSecs,
+                category = heroMovie.categoryId.let(vodCategoryNames::get),
+                onWatch = { vm.selectVod(heroMovie) }
+            ) else Box(
+                Modifier.fillMaxWidth().height(430.dp).background(Color(0xFF050505))
             )
         }
 
@@ -756,6 +761,27 @@ private fun HeroBanner(
             .crossfade(false)
             .build()
     }
+    val backgroundRequest = imageRequest ?: imageUrl?.takeIf { it.isNotBlank() }?.let {
+        ImageRequest.Builder(context)
+            .data(it).size(960, 540)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .crossfade(false).build()
+    }
+    val backgroundPainter = rememberAsyncImagePainter(backgroundRequest)
+    val artworkReady = backgroundRequest == null || backgroundPainter.state is AsyncImagePainter.State.Success
+    var revealHero by remember(title, backgroundRequest) { mutableStateOf(false) }
+    LaunchedEffect(artworkReady, title) {
+        if (artworkReady) {
+            delay(80)
+            revealHero = true
+        }
+    }
+    val revealProgress by animateFloatAsState(
+        targetValue = if (revealHero) 1f else 0f,
+        animationSpec = tween(durationMillis = 480),
+        label = "heroReveal"
+    )
     val posterFallback = backdrop == null && !imageUrl.isNullOrBlank()
     val baseBlack = Color(0xFF050505)
     val overlay = overlayOpacity.coerceIn(0f, 1f)
@@ -766,9 +792,15 @@ private fun HeroBanner(
             .height(if (compact) 520.dp else 430.dp)
             .background(baseBlack)
     ) {
+        Box(
+            Modifier.fillMaxSize().graphicsLayer {
+                alpha = revealProgress
+                translationY = (1f - revealProgress) * 12f
+            }
+        ) {
         if (imageRequest != null) {
-            AsyncImage(
-                model = imageRequest,
+            Image(
+                painter = backgroundPainter,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 alignment = focalAlignment,
@@ -778,12 +810,8 @@ private fun HeroBanner(
                 }
             )
         } else if (posterFallback) {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(imageUrl).size(960, 540)
-                    .memoryCachePolicy(CachePolicy.ENABLED)
-                    .diskCachePolicy(CachePolicy.ENABLED)
-                    .crossfade(false).build(),
+            Image(
+                painter = backgroundPainter,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize().graphicsLayer {
@@ -879,6 +907,7 @@ private fun HeroBanner(
             }
         }
     }
+}
 }
 
 @Composable
