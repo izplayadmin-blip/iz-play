@@ -234,7 +234,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     startupLoading = true,
                     startupMessage = "Verificando as melhores rotas..."
                 )
-                viewModelScope.launch { refreshClientConfigForStartup() }
+                refreshClientConfigForStartup()
                 bootFromCacheOrNetwork(config)
             } else {
                 refreshClientConfigForStartup()
@@ -259,7 +259,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _state.value.clientConfig ?: RemoteConfigClient.FALLBACK_CONFIG
 
     private suspend fun refreshClientConfigForStartup() {
-        withTimeoutOrNull(11_000) { RemoteConfigClient().fetchConfig() }?.let {
+        withTimeoutOrNull(6_000) { RemoteConfigClient().fetchConfig() }?.let {
             cache.saveClientConfig(it)
             applyClientConfig(it)
         }
@@ -273,8 +273,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (home != null && home.channels.isNotEmpty() && home.vod.isNotEmpty() && home.series.isNotEmpty()) {
             applyHomeSnapshot(config, home)
             loadAccountProfiles(config)
-            updateStartup("Tudo pronto!", 1f)
+            prepareHomeHero(config)
             warmHomeImages()
+            updateStartup("Tudo pronto!", 1f)
             _state.value = _state.value.copy(startupLoading = false, loading = false)
             return
         }
@@ -317,14 +318,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         loadAccountProfiles(_state.value.config ?: config)
 
         _state.value.selectedChannel?.let { fetchEpg(_state.value.config ?: config, it) }
-        updateStartup("Tudo pronto!", 1f)
         cache.saveHome(
             cacheKey,
             Catalog(_state.value.categories, _state.value.allChannels),
             VodCatalog(_state.value.vodCategories, _state.value.allVod),
             SeriesCatalog(_state.value.seriesCategories, _state.value.allSeries)
         )
+        prepareHomeHero(_state.value.config ?: config)
         warmHomeImages()
+        updateStartup("Tudo pronto!", 1f)
         _state.value = _state.value.copy(startupLoading = false, loading = false)
         viewModelScope.launch {
             // Dá prioridade total à primeira renderização e ao foco do controle.
@@ -344,7 +346,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             store.saveConfig(config)
             _state.value = _state.value.copy(configured = true, config = config, startupLoading = true)
-            viewModelScope.launch { refreshClientConfigForStartup() }
+            refreshClientConfigForStartup()
             bootFromCacheOrNetwork(config)
         }
     }
@@ -612,6 +614,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val app = getApplication<Application>()
         val snapshot = _state.value
         val urls = buildList {
+            snapshot.heroVod?.let { hero ->
+                add(hero.backdropUrl ?: hero.posterUrl.orEmpty())
+            }
             snapshot.allVod.asSequence()
                 .filter { !it.posterUrl.isNullOrBlank() }
                 .sortedByDescending { it.rating?.replace(',', '.')?.toDoubleOrNull() ?: 0.0 }
@@ -638,6 +643,51 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     )
                 }
             }.awaitAll()
+        }
+    }
+
+    /** Resolve e prepara o Hero antes de liberar a Home para o usuario. */
+    private suspend fun prepareHomeHero(config: ProviderConfig) {
+        updateStartup("Preparando o destaque...", 0.95f)
+        val movies = _state.value.allVod
+        if (movies.isEmpty()) return
+        val centralId = _state.value.clientConfig?.homeHero?.vodId.orEmpty()
+        val central = centralId.takeIf { it.isNotBlank() }
+            ?.let { wanted -> movies.firstOrNull { it.id == wanted } }
+        val recentWithArt = movies.asSequence()
+            .filter { !it.posterUrl.isNullOrBlank() }
+            .take(600)
+            .toList()
+        val fallback = recentWithArt
+            .filter { (it.rating?.replace(',', '.')?.toDoubleOrNull() ?: 0.0) >= 7.0 }
+            .maxWithOrNull(
+                compareBy<VodItem> { it.rating?.replace(',', '.')?.toDoubleOrNull() ?: 0.0 }
+                    .thenBy { it.addedAt }
+            )
+            ?: recentWithArt.firstOrNull()
+            ?: movies.first()
+        val selected = central ?: fallback
+        val detailed = withTimeoutOrNull(4_000) {
+            runCatching { repo.loadVodDetail(config, selected, activeApiBase) }.getOrDefault(selected)
+        } ?: selected
+        _state.value = _state.value.copy(heroVod = detailed)
+
+        val artwork = detailed.backdropUrl ?: detailed.posterUrl
+        if (!artwork.isNullOrBlank()) {
+            val app = getApplication<Application>()
+            withTimeoutOrNull(2_500) {
+                withContext(Dispatchers.IO) {
+                    app.imageLoader.execute(
+                        ImageRequest.Builder(app)
+                            .data(artwork)
+                            .size(1280, 720)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
+                            .diskCachePolicy(CachePolicy.ENABLED)
+                            .networkCachePolicy(CachePolicy.ENABLED)
+                            .build()
+                    )
+                }
+            }
         }
     }
 

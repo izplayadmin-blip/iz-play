@@ -572,45 +572,9 @@ private fun StartDashboard(
             .take(80)
             .toList()
     }
-    // O painel escolhe um unico destaque global a partir da audiencia agregada.
-    // A TV recebe somente o ID publico do VOD: nenhuma credencial XUI.ONE entra
-    // no APK e o perfil local nao interfere no Hero.
-    val centralHeroId = state.clientConfig?.homeHero?.vodId.orEmpty()
-    val centralHero = remember(state.allVod, centralHeroId) {
-        centralHeroId.takeIf(String::isNotBlank)?.let { wanted ->
-            state.allVod.firstOrNull { it.id == wanted }
-        }
-    }
-    val fallbackHero = remember(state.allVod) {
-        val recent = state.allVod
-            .asSequence()
-            .filter { !it.posterUrl.isNullOrBlank() }
-            .take(600)
-            .toList()
-        recent
-            .filter { recommendationRating(it.rating) >= 7.0 }
-            .maxWithOrNull(
-                compareBy<VodItem> { recommendationRating(it.rating) }
-                    .thenBy { it.addedAt }
-            )
-            ?: recent.firstOrNull()
-            ?: state.allVod.firstOrNull()
-    }
-    val heroCandidate = centralHero ?: fallbackHero
-    // O refresh silencioso do catálogo não troca o destaque. A única mudança
-    // permitida é a chegada tardia da decisão central do painel.
-    var fixedHeroMovie by remember { mutableStateOf<VodItem?>(null) }
-    LaunchedEffect(heroCandidate?.id, centralHero?.id) {
-        when {
-            centralHero != null && fixedHeroMovie?.id != centralHero.id -> fixedHeroMovie = centralHero
-            fixedHeroMovie == null && heroCandidate != null -> fixedHeroMovie = heroCandidate
-        }
-    }
-    LaunchedEffect(fixedHeroMovie?.id) { vm.loadHeroDetail(fixedHeroMovie) }
-    // Titulo, nota e arte basicos aparecem imediatamente. A segunda chamada
-    // apenas enriquece sinopse/backdrop quando chegar, sem segurar toda a Home.
-    val heroMovie = state.heroVod?.takeIf { it.id == fixedHeroMovie?.id } ?: fixedHeroMovie
-    val heroSeries = personalizedSeries.firstOrNull().takeIf { heroCandidate == null }
+    // O ViewModel entrega o filme global ja resolvido, enriquecido e com a arte
+    // em cache antes de liberar a Home. Nao existe Hero provisório na interface.
+    val heroMovie = state.heroVod
     val continueWatching = remember(
         state.recentVodIds,
         state.recentSeriesIds,
@@ -685,28 +649,21 @@ private fun StartDashboard(
         item {
             HeroBanner(
                 eyebrow = "DESTAQUE",
-                title = heroMovie?.name ?: if (heroCandidate == null) heroSeries?.name ?: "IZ Play" else "IZ Play",
-                subtitle = heroMovie?.plot
-                    ?: (if (heroCandidate == null) heroSeries?.plot else null)
-                    ?: "Preparando o melhor do seu catálogo.",
-                imageUrl = heroMovie?.posterUrl ?: if (heroCandidate == null) heroSeries?.coverUrl else null,
+                title = heroMovie?.name ?: "IZ Play",
+                subtitle = heroMovie?.plot ?: "O filme mais assistido no IZ Play.",
+                imageUrl = heroMovie?.posterUrl,
                 backdropUrl = heroMovie?.backdropUrl,
                 backdropMobileUrl = heroMovie?.backdropMobileUrl,
                 backdropPositionX = heroMovie?.backdropPositionX ?: 65f,
                 backdropPositionY = heroMovie?.backdropPositionY ?: 50f,
                 backdropScale = heroMovie?.backdropScale ?: 1f,
                 overlayOpacity = heroMovie?.overlayOpacity ?: 0.82f,
-                year = heroMovie?.year ?: heroSeries?.year,
-                rating = heroMovie?.rating ?: heroSeries?.rating,
+                year = heroMovie?.year,
+                rating = heroMovie?.rating,
                 durationSecs = heroMovie?.durationSecs ?: 0,
-                category = heroMovie?.categoryId?.let(vodCategoryNames::get)
-                    ?: heroSeries?.categoryId?.let(seriesCategoryNames::get),
+                category = heroMovie?.categoryId?.let(vodCategoryNames::get),
                 onWatch = {
-                    when {
-                        heroMovie != null -> vm.selectVod(heroMovie)
-                        heroCandidate == null && heroSeries != null -> vm.selectSeries(heroSeries)
-                        else -> onOpen(NavItem.CANAIS)
-                    }
+                    heroMovie?.let(vm::selectVod) ?: onOpen(NavItem.FILMES)
                 }
             )
         }
