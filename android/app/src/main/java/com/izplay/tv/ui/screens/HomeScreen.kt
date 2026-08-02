@@ -153,7 +153,6 @@ fun HomeScreen(vm: MainViewModel) {
         Row(
             Modifier.fillMaxSize().graphicsLayer {
                 alpha = homeEntrance
-                translationY = (1f - homeEntrance) * 18f
             }
         ) {
             Sidebar(
@@ -810,7 +809,6 @@ private fun HeroBanner(
         Box(
             Modifier.fillMaxSize().graphicsLayer {
                 alpha = revealProgress
-                translationY = (1f - revealProgress) * 12f
             }
         ) {
         if (imageRequest != null) {
